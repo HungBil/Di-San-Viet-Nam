@@ -40,6 +40,12 @@ const localModels: GlbModel[] = [
   { name: "Xe tăng 843", path: "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb", url: "/models/tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb", size: 6058444 }
 ];
 
+const modelCameraPresets: Record<string, { direction: Vector3; zoom: number }> = {
+  [sealModelPath]: { direction: new Vector3(0, 0.42, 1), zoom: 0.72 },
+  "one-pillar-pagoda-chua-mot-cot-compressed.glb": { direction: new Vector3(0, 0.3, 1), zoom: 0.68 },
+  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": { direction: new Vector3(0, 0.24, 1), zoom: 0.78 },
+};
+
 type ModelViewerPageProps = {
   embeddedModel?: GlbModel;
 };
@@ -215,7 +221,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
         if (cancelled) return;
         modelRef.current = gltf.scene;
         sceneRef.current?.add(gltf.scene);
-        frameModel(gltf.scene, cameraRef.current, controlsRef.current);
+        frameModel(gltf.scene, cameraRef.current, controlsRef.current, selectedPath);
         setStatus("ready");
       },
       (event) => {
@@ -385,6 +391,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
                   modelRef.current,
                   cameraRef.current,
                   controlsRef.current,
+                  selectedPath,
                 )
               }
               aria-label="Căn lại model"
@@ -428,6 +435,7 @@ function frameModel(
   model: Object3D | null,
   camera: PerspectiveCamera | null,
   controls: OrbitControls | null,
+  modelPath?: string,
 ) {
   if (!model || !camera || !controls) return;
 
@@ -435,11 +443,13 @@ function frameModel(
   const size = box.getSize(new Vector3());
   const center = box.getCenter(new Vector3());
   const maxSize = Math.max(size.x, size.y, size.z) || 1;
-  const distance = maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360));
+  const preset = modelPath ? modelCameraPresets[modelPath] : undefined;
+  const distance = (maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360))) * (preset?.zoom ?? 1);
+  const direction = preset?.direction.clone().normalize() ?? new Vector3(1, 0.55, 1).normalize();
 
   camera.position
     .copy(center)
-    .add(new Vector3(distance, distance * 0.55, distance));
+    .add(direction.multiplyScalar(distance));
   camera.near = Math.max(0.01, distance / 100);
   camera.far = distance * 100;
   camera.updateProjectionMatrix();
