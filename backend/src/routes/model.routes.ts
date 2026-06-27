@@ -9,7 +9,7 @@ export type GlbModel = {
   size: number;
 };
 
-export const modelDir = path.resolve(process.cwd(), "..");
+export const modelDir = path.resolve(process.cwd(), "../frontend/public/models");
 export const modelRouter = Router();
 
 modelRouter.get("/models", async (_req, res, next) => {
