@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
     "preview": "vite preview --host 0.0.0.0",
+    "test:annotation-voice": "tsc --target ES2022 --module NodeNext --moduleResolution NodeNext --outDir .test-build --rootDir src src/components/voice/annotationVoiceController.ts && node src/components/voice/annotationVoiceController.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

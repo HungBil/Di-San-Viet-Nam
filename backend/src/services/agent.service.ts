@@ -40,3 +40,18 @@ export async function chatWithGuide(
 
   return response.json() as Promise<{ answer: string; suggestions: string[] }>;
 }
+
+export async function generateAnnotationNarration(text: string): Promise<{ text: string }> {
+  const response = await fetch(`${env.agentBaseUrl}/annotation/narration`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(20_000),
+    body: JSON.stringify({ text })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Agent annotation narration request failed with ${response.status}`);
+  }
+
+  return response.json() as Promise<{ text: string }>;
+}

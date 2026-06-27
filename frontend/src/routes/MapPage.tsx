@@ -133,6 +133,7 @@ export function MapPage() {
                 }
               >
                 <EmbeddedModelViewer
+                  autoNarrateAnnotations
                   key={selectedModel.path}
                   embeddedModel={selectedModel}
                 />

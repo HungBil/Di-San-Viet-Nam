@@ -1,4 +1,4 @@
-import { Box, Maximize2, RefreshCw, RotateCcw, Upload } from "lucide-react";
+import { Box, Maximize2, RefreshCw, RotateCcw, Square, Upload, Volume2 } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AmbientLight,
@@ -13,6 +13,7 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { useAnnotationVoice } from "../components/voice/useAnnotationVoice";
 import type { GlbModel } from "../lib/types";
 
 type LoadStatus = "idle" | "loading" | "ready" | "error";
@@ -83,6 +84,7 @@ const brighterModelPaths = new Set([
 ]);
 
 type ModelViewerPageProps = {
+  autoNarrateAnnotations?: boolean;
   embeddedModel?: GlbModel;
 };
 
@@ -135,7 +137,7 @@ const annotationSets: Record<string, Annotation[]> = {
   ],
 };
 
-export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
+export function ModelViewerPage({ autoNarrateAnnotations = false, embeddedModel }: ModelViewerPageProps = {}) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<Scene | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
@@ -174,6 +176,8 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   const activePoint = annotations.find(
     (point) => point.annotation.id === activeAnnotation?.id,
   );
+  const { speakAnnotation, stopAnnotationVoice, voiceState } =
+    useAnnotationVoice(autoNarrateAnnotations);
 
   useEffect(() => {
     annotationsRef.current = annotationSets[selectedPath ?? ""] ?? [];
@@ -269,6 +273,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   useEffect(() => {
     if (!selectedUrl || !sceneRef.current) return;
 
+    if (autoNarrateAnnotations) stopAnnotationVoice();
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath("/draco/");
     const loader = new GLTFLoader();
@@ -320,7 +325,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       cancelled = true;
       dracoLoader.dispose();
     };
-  }, [selectedUrl]);
+  }, [autoNarrateAnnotations, selectedPath, selectedUrl, stopAnnotationVoice]);
 
   function chooseModel(model: GlbModel) {
     objectUrlRef.current && URL.revokeObjectURL(objectUrlRef.current);
@@ -347,6 +352,16 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       controlsRef.current,
       selectedPath,
     );
+    if (autoNarrateAnnotations) {
+      void speakAnnotation(
+        `Di tích: ${selectedName}. Điểm thuyết minh: ${annotation.title}. ${annotation.body}`,
+      );
+    }
+  }
+
+  function closeAnnotation() {
+    setActiveAnnotation(null);
+    if (autoNarrateAnnotations) stopAnnotationVoice();
   }
 
   function toggleAutoRotate() {
@@ -486,7 +501,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
                 </h2>
                 <button
                   className="text-sm text-white/65 hover:text-white"
-                  onClick={() => setActiveAnnotation(null)}
+                  onClick={closeAnnotation}
                   aria-label="Đóng chú thích"
                 >
                   Đóng
@@ -547,6 +562,27 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
               <RotateCcw size={18} />
             </button>
           </div>
+          {autoNarrateAnnotations && voiceState.phase !== "idle" ? (
+            <div className="absolute bottom-4 left-4 flex max-w-[calc(100%-8.5rem)] items-center gap-3 rounded bg-black/65 px-3 py-2 text-white shadow-soft backdrop-blur">
+              <Volume2 size={17} className="shrink-0 text-gold" />
+              <p className="min-w-0 truncate text-xs">
+                {voiceState.phase === "loading"
+                  ? "Đang tạo giọng..."
+                  : voiceState.phase === "speaking"
+                    ? "Đang đọc chú thích"
+                    : voiceState.message ?? "Không phát được giọng đọc"}
+              </p>
+              <button
+                type="button"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded bg-white text-[#102832] transition hover:bg-gold"
+                onClick={stopAnnotationVoice}
+                aria-label="Dừng giọng đọc"
+                title="Dừng"
+              >
+                <Square size={13} fill="currentColor" />
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

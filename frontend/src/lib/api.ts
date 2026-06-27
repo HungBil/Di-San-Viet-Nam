@@ -1,5 +1,6 @@
 import type {
   AgeGroup,
+  AnnotationNarrationResponse,
   Artifact,
   ArtifactDetail,
   ChatMessage,
@@ -53,6 +54,11 @@ export const api = {
   story: (id: string) => request<Story>(`/api/stories/${id}`),
   chat: (payload: { artifactId: string; message: string; history?: ChatMessage[] }) =>
     request<{ answer: string; suggestions: string[] }>("/api/chat", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  annotationNarration: (payload: { text: string }) =>
+    request<AnnotationNarrationResponse>("/api/annotation/narration", {
       method: "POST",
       body: JSON.stringify(payload)
     }),
