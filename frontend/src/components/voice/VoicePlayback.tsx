@@ -32,15 +32,22 @@ export function VoicePlayback({ text }: { text: string }) {
         audio.onended = () => setIsSpeaking(false);
         audio.onerror = () => {
           setIsSpeaking(false);
-          setStatus("Audio element failed. Falling back to browser speech.");
-          speakWithBrowser();
+          setStatus("Audio element failed. ElevenLabs audio was not played.");
         };
         setIsSpeaking(true);
         await audio.play();
         return;
       }
+
+      if (provider !== "mock") {
+        setIsSpeaking(false);
+        return;
+      }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Voice request failed.");
+      if (provider !== "mock") {
+        return;
+      }
     } finally {
       setIsLoading(false);
     }
