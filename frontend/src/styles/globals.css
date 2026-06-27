@@ -43,6 +43,39 @@ body {
   margin: 0;
 }
 
+body.is-ar-active,
+body.is-ar-active #root,
+body.is-ar-active main,
+body.is-ar-active .heritage-surface,
+body.is-ar-active .model-viewer-shell,
+body.is-ar-active .model-viewer-stage {
+  background: transparent !important;
+}
+
+body.is-ar-active .model-viewer-shell {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+body.is-ar-active .model-viewer-stage {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  overflow: hidden !important;
+  border-radius: 0 !important;
+  touch-action: none !important;
+  user-select: none !important;
+}
+
+body.is-ar-active .model-viewer-stage > div:first-child,
+body.is-ar-active .model-viewer-stage canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 h1,
 h2,
 h3 {

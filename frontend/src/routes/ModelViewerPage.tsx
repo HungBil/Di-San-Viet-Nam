@@ -1,12 +1,22 @@
-import { Box, Maximize2, RotateCcw, Upload } from "lucide-react";
+import { Box, Camera as CameraIcon, Maximize2, RotateCcw, ScanLine, Upload } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AmbientLight,
   Box3,
   DirectionalLight,
+  DoubleSide,
+  GridHelper,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
   Object3D,
   PerspectiveCamera,
+  Plane,
+  Quaternion,
+  Raycaster,
+  RingGeometry,
   Scene,
+  Vector2,
   Vector3,
   WebGLRenderer,
 } from "three";
@@ -48,6 +58,12 @@ const modelCameraPresets: Record<string, { direction: Vector3; zoom: number }> =
 
 type ModelViewerPageProps = {
   embeddedModel?: GlbModel;
+};
+
+type ArRuntime = {
+  capture: () => void;
+  end: () => void;
+  start: () => Promise<void>;
 };
 
 // Sửa vị trí marker ở `position: new Vector3(x, y, z)`.
@@ -108,6 +124,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   const modelRef = useRef<Object3D | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const annotationsRef = useRef<Annotation[]>([]);
+  const arRuntimeRef = useRef<ArRuntime | null>(null);
 
   const models = embeddedModel ? [embeddedModel] : localModels;
   const initialModel = models[0];
@@ -117,9 +134,11 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
+  const [isArRunning, setIsArRunning] = useState(false);
+  const [arMessage, setArMessage] = useState("");
   const [annotationPoints, setAnnotationPoints] = useState<{ annotation: Annotation; left: number; top: number; visible: boolean }[]>([]);
   const selectedPath = useMemo(() => models.find((model) => model.url === selectedUrl)?.path, [models, selectedUrl]);
-  const annotations = status === "ready" && annotationSets[selectedPath ?? ""] ? annotationPoints : [];
+  const annotations = !isArRunning && status === "ready" && annotationSets[selectedPath ?? ""] ? annotationPoints : [];
   const activePoint = annotations.find((point) => point.annotation.id === activeAnnotation?.id);
 
   useEffect(() => {
@@ -134,6 +153,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     const mount = mountRef.current;
     if (!mount) return;
     const container = mount;
+    const overlayRoot = container.parentElement ?? document.body;
 
     const scene = new Scene();
     scene.add(new AmbientLight("#ffffff", 1.8));
@@ -153,6 +173,8 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     renderer.setPixelRatio(1);
     renderer.outputColorSpace = "srgb";
     renderer.setClearAlpha(0);
+    renderer.setClearColor(0x000000, 0);
+    renderer.xr.enabled = true;
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -162,6 +184,300 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     cameraRef.current = camera;
     controlsRef.current = controls;
 
+    const reticle = new Group();
+    const scanGrid = new GridHelper(1.2, 12, "#d8ad52", "#d8ad52");
+    const gridMaterials = Array.isArray(scanGrid.material)
+      ? scanGrid.material
+      : [scanGrid.material];
+    gridMaterials.forEach((material) => {
+      material.transparent = true;
+      material.opacity = 0.45;
+      material.depthWrite = false;
+    });
+    const scanRing = new Mesh(
+      new RingGeometry(0.52, 0.56, 72).rotateX(-Math.PI / 2),
+      new MeshBasicMaterial({
+        color: "#d8ad52",
+        opacity: 0.8,
+        transparent: true,
+        depthWrite: false,
+        side: DoubleSide,
+      }),
+    );
+    const scanCenter = new Mesh(
+      new RingGeometry(0.08, 0.1, 40).rotateX(-Math.PI / 2),
+      new MeshBasicMaterial({
+        color: "#fff2c7",
+        opacity: 0.9,
+        transparent: true,
+        depthWrite: false,
+        side: DoubleSide,
+      }),
+    );
+    reticle.add(scanGrid, scanRing, scanCenter);
+    reticle.matrixAutoUpdate = false;
+    reticle.visible = false;
+    scene.add(reticle);
+
+    let hitTestSource: XRHitTestSource | null = null;
+    let hitTestRequested = false;
+    let hasPlacedModel = false;
+    let modelPlaneY = 0;
+    let previewTransform: { position: Vector3; quaternion: Quaternion; scale: Vector3 } | null = null;
+    const pointer = new Vector2();
+    const raycaster = new Raycaster();
+    const movePlane = new Plane();
+    const moveHit = new Vector3();
+    const activePointers = new Map<number, { x: number; y: number }>();
+    let ignoreSelectUntil = 0;
+    let arDrag:
+      | {
+          pointerId: number;
+          mode: "move" | "rotate";
+          startX: number;
+          startY: number;
+          lastX: number;
+          moved: boolean;
+          moveOffset: Vector3;
+          planeY: number;
+        }
+      | null = null;
+    let arPinch:
+      | {
+          startDistance: number;
+          startScale: Vector3;
+          planeY: number;
+        }
+      | null = null;
+
+    function getPointerDistance() {
+      const points = [...activePointers.values()];
+      if (points.length < 2) return 0;
+      return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+    }
+
+    function keepModelOnPlane(model: Object3D, planeY: number) {
+      const box = new Box3().setFromObject(model);
+      model.position.y += planeY - box.min.y;
+    }
+
+    function setPointerFromEvent(event: PointerEvent) {
+      const rect = overlayRoot.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * 2 - 1;
+      pointer.y = -(((event.clientY - rect.top) / Math.max(1, rect.height)) * 2 - 1);
+    }
+
+    function intersectModel(event: PointerEvent) {
+      const model = modelRef.current;
+      if (!model || !model.visible) return false;
+      setPointerFromEvent(event);
+      raycaster.setFromCamera(pointer, renderer.xr.isPresenting ? renderer.xr.getCamera() : camera);
+      return raycaster.intersectObject(model, true).length > 0;
+    }
+
+    function intersectMovePlane(event: PointerEvent, planeY: number) {
+      setPointerFromEvent(event);
+      raycaster.setFromCamera(pointer, renderer.xr.isPresenting ? renderer.xr.getCamera() : camera);
+      movePlane.set(new Vector3(0, 1, 0), -planeY);
+      return raycaster.ray.intersectPlane(movePlane, moveHit);
+    }
+
+    function onArPointerDown(event: PointerEvent) {
+      if (!renderer.xr.isPresenting || event.button !== 0) return;
+      if ((event.target as Element | null)?.closest?.("button")) return;
+      const model = modelRef.current;
+      if (!model || !model.visible) return;
+
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      overlayRoot.setPointerCapture?.(event.pointerId);
+
+      if (activePointers.size >= 2) {
+        arDrag = null;
+        arPinch = {
+          startDistance: getPointerDistance(),
+          startScale: model.scale.clone(),
+          planeY: model.position.y,
+        };
+        setArMessage("Chụm/mở 2 ngón để thu phóng hiện vật.");
+        return;
+      }
+
+      const planeY = hasPlacedModel ? modelPlaneY : model.position.y;
+      const hit = intersectMovePlane(event, planeY);
+      arDrag = {
+        pointerId: event.pointerId,
+        mode: intersectModel(event) ? "rotate" : "move",
+        startX: event.clientX,
+        startY: event.clientY,
+        lastX: event.clientX,
+        moved: false,
+        moveOffset: hit ? model.position.clone().sub(hit) : new Vector3(),
+        planeY,
+      };
+      setArMessage(arDrag.mode === "rotate" ? "Kéo ngang để xoay hiện vật." : "Kéo để di chuyển hiện vật trên mặt phẳng.");
+    }
+
+    function onArPointerMove(event: PointerEvent) {
+      const model = modelRef.current;
+      if (activePointers.has(event.pointerId)) {
+        activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      }
+
+      if (arPinch && activePointers.size >= 2 && model && model.visible) {
+        const distance = getPointerDistance();
+        if (arPinch.startDistance > 0 && distance > 0) {
+          const scaleFactor = Math.min(2.4, Math.max(0.35, distance / arPinch.startDistance));
+          model.scale.copy(arPinch.startScale).multiplyScalar(scaleFactor);
+          keepModelOnPlane(model, arPinch.planeY);
+          ignoreSelectUntil = performance.now() + 600;
+        }
+        return;
+      }
+
+      if (!arDrag || arDrag.pointerId !== event.pointerId || !model || !model.visible) return;
+
+      const movedDistance = Math.hypot(event.clientX - arDrag.startX, event.clientY - arDrag.startY);
+      if (movedDistance > 6) arDrag.moved = true;
+
+      if (arDrag.mode === "rotate") {
+        const deltaX = event.clientX - arDrag.lastX;
+        const rotation = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), deltaX * 0.012);
+        model.quaternion.premultiply(rotation);
+        arDrag.lastX = event.clientX;
+        return;
+      }
+
+      const hit = intersectMovePlane(event, arDrag.planeY);
+      if (hit) {
+        model.position.copy(hit).add(arDrag.moveOffset);
+        keepModelOnPlane(model, arDrag.planeY);
+      }
+    }
+
+    function onArPointerUp(event: PointerEvent) {
+      activePointers.delete(event.pointerId);
+      if (arPinch) {
+        ignoreSelectUntil = performance.now() + 600;
+        setArMessage("Đã thu phóng hiện vật.");
+        if (activePointers.size < 2) arPinch = null;
+      }
+      overlayRoot.releasePointerCapture?.(event.pointerId);
+      if (!arDrag || arDrag.pointerId !== event.pointerId) return;
+      if (arDrag.moved) {
+        ignoreSelectUntil = performance.now() + 600;
+        setArMessage(arDrag.mode === "rotate" ? "Đã xoay hiện vật." : "Đã di chuyển hiện vật.");
+      }
+      arDrag = null;
+    }
+
+    function captureArPhoto() {
+      try {
+        renderer.domElement.toBlob((blob) => {
+          if (!blob) {
+            setArMessage("Không thể chụp ảnh AR trên trình duyệt này.");
+            return;
+          }
+
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `di-san-viet-ar-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+          setArMessage("Đã chụp ảnh AR.");
+        }, "image/png");
+      } catch {
+        setArMessage("Trình duyệt không cho phép chụp ảnh AR.");
+      }
+    }
+
+    function placeModelAtReticle() {
+      if (performance.now() < ignoreSelectUntil) return;
+      const model = modelRef.current;
+      if (!model || !reticle.visible || !previewTransform) {
+        setArMessage("Hãy lia camera xuống mặt sàn hoặc mặt bàn.");
+        return;
+      }
+
+      const hitPosition = new Vector3();
+      reticle.matrix.decompose(hitPosition, new Quaternion(), new Vector3());
+
+      model.position.copy(previewTransform.position);
+      model.quaternion.copy(previewTransform.quaternion);
+      model.scale.copy(previewTransform.scale);
+      const box = new Box3().setFromObject(model);
+      const size = box.getSize(new Vector3());
+      const fitScale = 0.65 / (Math.max(size.x, size.y, size.z) || 1);
+
+      model.scale.multiplyScalar(fitScale);
+      model.quaternion.identity();
+      model.position.set(hitPosition.x, hitPosition.y, hitPosition.z);
+      keepModelOnPlane(model, hitPosition.y);
+      model.visible = true;
+      hasPlacedModel = true;
+      modelPlaneY = hitPosition.y;
+      reticle.visible = false;
+      setArMessage("Đã đặt hiện vật. Kéo trên model để xoay, kéo ngoài model để di chuyển.");
+    }
+
+    function onSessionStart() {
+      document.body.classList.add("is-ar-active");
+      hasPlacedModel = false;
+      modelPlaneY = 0;
+      arDrag = null;
+      arPinch = null;
+      activePointers.clear();
+      controls.enabled = false;
+      const model = modelRef.current;
+      if (model) {
+        previewTransform = {
+          position: model.position.clone(),
+          quaternion: model.quaternion.clone(),
+          scale: model.scale.clone(),
+        };
+        model.visible = false;
+      }
+      setActiveAnnotation(null);
+      setIsArRunning(true);
+      setArMessage("Lia camera để tìm mặt phẳng, chạm để đặt. Sau đó kéo model để xoay hoặc kéo nền để di chuyển.");
+      requestAnimationFrame(resize);
+    }
+
+    function onSessionEnd() {
+      document.body.classList.remove("is-ar-active");
+      hitTestSource?.cancel();
+      hitTestSource = null;
+      hitTestRequested = false;
+      hasPlacedModel = false;
+      modelPlaneY = 0;
+      arDrag = null;
+      arPinch = null;
+      activePointers.clear();
+      reticle.visible = false;
+      const model = modelRef.current;
+      if (model && previewTransform) {
+        model.position.copy(previewTransform.position);
+        model.quaternion.copy(previewTransform.quaternion);
+        model.scale.copy(previewTransform.scale);
+        model.visible = true;
+      }
+      previewTransform = null;
+      controls.enabled = true;
+      controls.reset();
+      setIsArRunning(false);
+      setArMessage("");
+      requestAnimationFrame(resize);
+    }
+
+    renderer.xr.addEventListener("sessionstart", onSessionStart);
+    renderer.xr.addEventListener("sessionend", onSessionEnd);
+    overlayRoot.addEventListener("pointerdown", onArPointerDown);
+    overlayRoot.addEventListener("pointermove", onArPointerMove);
+    overlayRoot.addEventListener("pointerup", onArPointerUp);
+    overlayRoot.addEventListener("pointercancel", onArPointerUp);
+
     function resize() {
       camera.aspect =
         container.clientWidth / Math.max(1, container.clientHeight);
@@ -170,25 +486,101 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     }
 
     let lastAnnotationUpdate = 0;
-    function animate(now = 0) {
-      controls.update();
+    function animate(now = 0, frame?: XRFrame) {
+      if (renderer.xr.isPresenting) {
+        const session = renderer.xr.getSession();
+        if (session && frame && !hitTestRequested) {
+          const requestHitTestSource = session.requestHitTestSource?.bind(session);
+          if (!requestHitTestSource) {
+            setArMessage("Thiết bị này chưa hỗ trợ dò mặt phẳng AR.");
+            hitTestRequested = true;
+            return;
+          }
+          session
+            .requestReferenceSpace("viewer")
+            .then((space) => requestHitTestSource({ space }))
+            .then((source) => {
+              hitTestSource = source ?? null;
+            })
+            .catch(() =>
+              setArMessage("Không thể dò mặt phẳng trên thiết bị này."),
+            );
+          hitTestRequested = true;
+        }
+
+        if (frame && hitTestSource) {
+          const referenceSpace = renderer.xr.getReferenceSpace();
+          const hits = frame.getHitTestResults(hitTestSource);
+          reticle.visible = !hasPlacedModel && hits.length > 0 && Boolean(referenceSpace);
+          if (reticle.visible && referenceSpace) {
+            const pose = hits[0].getPose(referenceSpace);
+            if (pose) reticle.matrix.fromArray(pose.transform.matrix);
+            const pulse = 1 + Math.sin(now * 0.006) * 0.04;
+            scanGrid.scale.setScalar(pulse);
+            scanRing.scale.setScalar(0.94 + Math.sin(now * 0.004) * 0.08);
+            scanCenter.scale.setScalar(1 + Math.sin(now * 0.01) * 0.18);
+          }
+        }
+      } else {
+        controls.update();
+        reticle.visible = false;
+      }
       renderer.render(scene, camera);
-      if (now - lastAnnotationUpdate > 100) {
+      if (!renderer.xr.isPresenting && now - lastAnnotationUpdate > 100) {
         lastAnnotationUpdate = now;
         if (annotationsRef.current.length > 0)
           setAnnotationPoints(
             projectAnnotations(annotationsRef.current, camera, container),
           );
       }
-      requestAnimationFrame(animate);
     }
 
     resize();
-    animate();
+    renderer.setAnimationLoop(animate);
     window.addEventListener("resize", resize);
+
+    arRuntimeRef.current = {
+      capture: captureArPhoto,
+      end: () => renderer.xr.getSession()?.end(),
+      start: async () => {
+        if (!window.isSecureContext) {
+          setArMessage("AR cần HTTPS hoặc localhost.");
+          return;
+        }
+        if (!navigator.xr || !(await navigator.xr.isSessionSupported("immersive-ar"))) {
+          setArMessage("Thiết bị hoặc trình duyệt chưa hỗ trợ WebXR AR.");
+          return;
+        }
+
+        try {
+          renderer.xr.setReferenceSpaceType("local-floor");
+          const session = await navigator.xr.requestSession("immersive-ar", {
+            requiredFeatures: ["hit-test"],
+            optionalFeatures: ["local-floor", "dom-overlay"],
+            domOverlay: { root: overlayRoot },
+          });
+          session.addEventListener("select", placeModelAtReticle);
+          await renderer.xr.setSession(session);
+        } catch (currentError) {
+          const errorName = currentError instanceof DOMException ? currentError.name : "Error";
+          setArMessage(errorName === "NotAllowedError" ? "Bạn chưa cấp quyền camera cho AR." : "Không thể mở chế độ AR.");
+        }
+      },
+    };
 
     return () => {
       window.removeEventListener("resize", resize);
+      arRuntimeRef.current = null;
+      document.body.classList.remove("is-ar-active");
+      renderer.setAnimationLoop(null);
+      renderer.xr.removeEventListener("sessionstart", onSessionStart);
+      renderer.xr.removeEventListener("sessionend", onSessionEnd);
+      overlayRoot.removeEventListener("pointerdown", onArPointerDown);
+      overlayRoot.removeEventListener("pointermove", onArPointerMove);
+      overlayRoot.removeEventListener("pointerup", onArPointerUp);
+      overlayRoot.removeEventListener("pointercancel", onArPointerUp);
+      renderer.xr.getSession()?.end();
+      hitTestSource?.cancel();
       controls.dispose();
       renderer.dispose();
       renderer.domElement.remove();
@@ -219,9 +611,10 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       selectedUrl,
       (gltf) => {
         if (cancelled) return;
-        modelRef.current = gltf.scene;
-        sceneRef.current?.add(gltf.scene);
-        frameModel(gltf.scene, cameraRef.current, controlsRef.current, selectedPath);
+        const pivot = createCenteredModelPivot(gltf.scene);
+        modelRef.current = pivot;
+        sceneRef.current?.add(pivot);
+        frameModel(pivot, cameraRef.current, controlsRef.current, selectedPath);
         setStatus("ready");
       },
       (event) => {
@@ -267,6 +660,15 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     );
   }
 
+  function toggleAr() {
+    if (isArRunning) arRuntimeRef.current?.end();
+    else void arRuntimeRef.current?.start();
+  }
+
+  function captureArPhoto() {
+    arRuntimeRef.current?.capture();
+  }
+
   return (
     <section className={embeddedModel ? "h-full" : "mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"}>
       <div className={embeddedModel ? "hidden" : "mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-end"}>
@@ -289,7 +691,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
         </label>
       </div>
 
-      <div className={embeddedModel ? "h-full min-h-[620px] overflow-hidden rounded-lg border border-ink/10 bg-white shadow-soft" : "grid min-h-[680px] overflow-hidden rounded border border-ink/10 bg-white shadow-soft lg:grid-cols-[320px_1fr]"}>
+      <div className={`model-viewer-shell ${embeddedModel ? "h-full min-h-[620px] overflow-hidden rounded-lg border border-ink/10 bg-white shadow-soft" : "grid min-h-[680px] overflow-hidden rounded border border-ink/10 bg-white shadow-soft lg:grid-cols-[320px_1fr]"}`}>
         <aside className={embeddedModel ? "hidden" : "border-b border-ink/10 bg-paper p-4 lg:border-b-0 lg:border-r"}>
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
             <Box size={18} />
@@ -323,7 +725,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
           </div>
         </aside>
 
-        <div className={embeddedModel ? "relative h-full min-h-[620px] bg-[radial-gradient(circle_at_48%_36%,#5a5a5a_0%,#3d3d3d_30%,#242424_58%,#111111_100%)]" : "relative min-h-[680px] bg-[radial-gradient(circle_at_48%_36%,#5a5a5a_0%,#3d3d3d_30%,#242424_58%,#111111_100%)]"}>
+        <div className={`model-viewer-stage ${embeddedModel ? "relative h-full min-h-[620px] bg-[radial-gradient(circle_at_48%_36%,#5a5a5a_0%,#3d3d3d_30%,#242424_58%,#111111_100%)]" : "relative min-h-[680px] bg-[radial-gradient(circle_at_48%_36%,#5a5a5a_0%,#3d3d3d_30%,#242424_58%,#111111_100%)]"}`}>
           <div ref={mountRef} className="absolute inset-0" />
           {annotations.map(({ annotation, left, top, visible }) => (
             <button
@@ -376,14 +778,33 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
               {selectedName || "Trình xem GLB"}
             </p>
             <p className="mt-1 text-xs text-white/70">
-              {status === "loading"
+              {arMessage || (status === "loading"
                 ? `Đang tải ${progress}%`
                 : status === "ready"
                   ? "Kéo để xoay, cuộn để zoom"
-                  : error || "Chọn model để bắt đầu"}
+                  : error || "Chọn model để bắt đầu")}
             </p>
           </div>
           <div className="absolute bottom-4 right-4 flex gap-2">
+            <button
+              className={`inline-flex h-10 items-center gap-2 rounded px-3 text-sm font-semibold shadow-lg ${isArRunning ? "bg-[#d8ad52] text-[#2d2820]" : "bg-white text-[#102832]"}`}
+              onClick={toggleAr}
+              aria-label={isArRunning ? "Thoát chế độ AR" : "Mở chế độ AR"}
+              title={isArRunning ? "Thoát AR" : "Xem trong không gian AR"}
+            >
+              <ScanLine size={18} />
+              {isArRunning ? "Thoát AR" : "Mở AR"}
+            </button>
+            {isArRunning && (
+              <button
+                className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832] shadow-lg"
+                onClick={captureArPhoto}
+                aria-label="Chụp ảnh AR"
+                title="Chụp ảnh AR"
+              >
+                <CameraIcon size={18} />
+              </button>
+            )}
             <button
               className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]"
               onClick={() =>
@@ -457,6 +878,17 @@ function frameModel(
   controls.target.copy(center);
   controls.update();
   controls.saveState();
+}
+
+function createCenteredModelPivot(content: Object3D) {
+  const box = new Box3().setFromObject(content);
+  const center = box.getCenter(new Vector3());
+  const pivot = new Group();
+  pivot.name = content.name ? `${content.name}-pivot` : "model-pivot";
+  content.position.sub(center);
+  pivot.position.copy(center);
+  pivot.add(content);
+  return pivot;
 }
 
 function focusAnnotation(
