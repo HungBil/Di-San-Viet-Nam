@@ -1,6 +1,7 @@
 import { MapPinned } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import { ProvinceGeoJsonMap, type MapMarker } from "../components/map/ProvinceGeoJsonMap";
+import type { GlbModel } from "../lib/types";
 
 const EmbeddedModelViewer = lazy(() => import("./ModelViewerPage").then((module) => ({ default: module.ModelViewerPage })));
 
@@ -13,6 +14,17 @@ const thangLongCitadel: MapMarker = {
   address: "19C Hoàng Diệu, phường Điện Biên, quận Ba Đình, Hà Nội"
 };
 
+const hoaKhiemPalace: MapMarker = {
+  id: "hoa-khiem-palace",
+  name: "Điện Hòa Khiêm – Lăng Tự Đức",
+  image: "/images/lang-vua-tu-duc.webp",
+  latitude: 16.4328,
+  longitude: 107.5658,
+  address: "Đường Đoàn Nhữ Hải, Thủy Xuân, Thành phố Huế, Thừa Thiên Huế"
+};
+
+const mapMarkers = [thangLongCitadel, hoaKhiemPalace];
+
 const sealModel = {
   name: "Ấn Sắc mệnh chi bảo",
   path: "Ấn_Sắc_mệnh_chi_bảo-compressed.glb",
@@ -20,53 +32,56 @@ const sealModel = {
   size: 7848516
 };
 
+const hoaKhiemModel = {
+  name: "Lăng vua Tự Đức - khu Hòa Khiêm",
+  path: "Hoa_Khiem_Temple_-_Tomb_of_Emperor_Tu_Duc_compressed.glb",
+  url: "/models/Hoa_Khiem_Temple_-_Tomb_of_Emperor_Tu_Duc_compressed.glb",
+  size: 20792420
+};
+
+const markerModels: Record<string, GlbModel> = {
+  [thangLongCitadel.id]: sealModel,
+  [hoaKhiemPalace.id]: hoaKhiemModel
+};
+
 export function MapPage() {
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
+  const selectedModel = selectedMarker ? markerModels[selectedMarker.id] : undefined;
 
   return (
-    <div className="heritage-surface -mt-[88px] min-h-screen pt-[88px]">
-      <section className="mx-auto max-w-7xl px-4 pb-12 pt-8 sm:px-6 sm:pt-10 lg:px-8">
+    <div className="heritage-surface -mt-[88px] min-h-screen pt-[40px]">
+      <section className="mx-auto max-w-[1600px] px-3 pb-12 pt-8 sm:px-4 sm:pt-10 lg:px-5">
         <div className="mb-6 flex flex-col justify-between gap-4 border-b border-[var(--heritage-line)] pb-5 sm:flex-row sm:items-end">
           <div>
-            <p className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-[var(--heritage-muted)]">
-              <MapPinned size={15} strokeWidth={1.7} />
-              Hành trình di sản
-            </p>
             <h1 className="mt-2 font-serif text-4xl text-[var(--heritage-brown)] sm:text-5xl">
               Khám phá Việt Nam
             </h1>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-[var(--heritage-muted)]">
-              Khám phá không gian văn hóa và những dấu tích lịch sử trên bản đồ 34 tỉnh, thành Việt Nam.
-            </p>
           </div>
 
-          <p className="max-w-xs text-sm leading-6 text-[var(--heritage-muted)] sm:text-right">
-            Di chuột để xem tên tỉnh thành, kéo để di chuyển và dùng nút điều khiển để phóng to bản đồ.
-          </p>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[2fr_3fr]">
           <div className="min-w-0">
             <ProvinceGeoJsonMap
               className="h-[620px] min-h-[620px] border border-[var(--heritage-line)] shadow-[0_20px_48px_rgba(45,40,32,0.14)]"
-              markers={[thangLongCitadel]}
+              markers={mapMarkers}
               activeMarkerId={selectedMarker?.id}
               onMarkerClick={setSelectedMarker}
             />
           </div>
 
-          <div className="min-w-0">
-            {selectedMarker ? (
-              <Suspense fallback={<div className="h-[620px] animate-pulse rounded-lg bg-[var(--heritage-paper-deep)]" />}>
-                <EmbeddedModelViewer embeddedModel={sealModel} />
+          <div className="min-w-0 self-stretch">
+            {selectedModel ? (
+              <Suspense fallback={<div className="h-full min-h-[620px] animate-pulse rounded-lg bg-[var(--heritage-paper-deep)]" />}>
+                <EmbeddedModelViewer key={selectedModel.path} embeddedModel={selectedModel} />
               </Suspense>
             ) : (
-              <div className="grid h-[620px] min-h-[620px] place-items-center overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[var(--heritage-paper-deep)] p-8 text-center shadow-[0_20px_48px_rgba(45,40,32,0.14)]">
+              <div className="grid h-full min-h-[620px] place-items-center overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[var(--heritage-paper-deep)] p-8 text-center shadow-[0_20px_48px_rgba(45,40,32,0.14)]">
                 <div className="max-w-sm">
                   <MapPinned className="mx-auto text-[var(--heritage-bronze)]" size={42} strokeWidth={1.4} />
                   <h2 className="mt-5 font-serif text-2xl text-[var(--heritage-brown)]">Chọn một địa điểm trên bản đồ</h2>
                   <p className="mt-3 text-sm leading-6 text-[var(--heritage-muted)]">
-                    Bấm vào marker Hoàng thành Thăng Long để mở và tương tác với model Ấn Sắc mệnh chi bảo.
+                    Bấm vào một marker di sản để mở và tương tác với model 3D tương ứng.
                   </p>
                 </div>
               </div>

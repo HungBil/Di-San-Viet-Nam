@@ -60,14 +60,11 @@ const localModels: GlbModel[] = [
   },
 ];
 
-const modelCameraSettings: Record<
-  string,
-  { distanceScale: number; view: Vector3 }
-> = {
-  [hoaKhiemModelPath]: {
-    distanceScale: 0.28,
-    view: new Vector3(0.25, 0.44, 1.18),
-  },
+const modelCameraPresets: Record<string, { direction: Vector3; zoom: number }> = {
+  [hoaKhiemModelPath]: { direction: new Vector3(0.25, 0.44, 1.18), zoom: 0.28 },
+  [sealModelPath]: { direction: new Vector3(0, 0.42, 1), zoom: 0.72 },
+  "one-pillar-pagoda-chua-mot-cot-compressed.glb": { direction: new Vector3(0, 0.3, 1), zoom: 0.68 },
+  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": { direction: new Vector3(0, 0.24, 1), zoom: 0.78 },
 };
 
 type ModelViewerPageProps = {
@@ -513,15 +510,13 @@ function frameModel(
   const size = box.getSize(new Vector3());
   const center = box.getCenter(new Vector3());
   const maxSize = Math.max(size.x, size.y, size.z) || 1;
-  const cameraSettings = modelCameraSettings[modelPath ?? ""];
-  const distanceScale = cameraSettings?.distanceScale ?? 1;
-  const view = cameraSettings?.view ?? new Vector3(1, 0.55, 1);
-  const distance =
-    (maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360))) * distanceScale;
+  const preset = modelPath ? modelCameraPresets[modelPath] : undefined;
+  const distance = (maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360))) * (preset?.zoom ?? 1);
+  const direction = preset?.direction.clone().normalize() ?? new Vector3(1, 0.55, 1).normalize();
 
   camera.position
     .copy(center)
-    .add(new Vector3(distance * view.x, distance * view.y, distance * view.z));
+    .add(direction.multiplyScalar(distance));
   camera.near = Math.max(0.01, distance / 100);
   camera.far = distance * 100;
   camera.updateProjectionMatrix();
