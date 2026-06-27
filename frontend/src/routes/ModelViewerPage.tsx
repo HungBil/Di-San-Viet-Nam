@@ -60,12 +60,17 @@ const localModels: GlbModel[] = [
   },
 ];
 
-const modelCameraPresets: Record<string, { direction: Vector3; zoom: number }> = {
+const modelCameraPresets: Record<string, { direction: Vector3; zoom: number; targetOffset?: Vector3 }> = {
   [hoaKhiemModelPath]: { direction: new Vector3(0.25, 0.44, 1.18), zoom: 0.28 },
-  [sealModelPath]: { direction: new Vector3(0, 0.42, 1), zoom: 0.72 },
+  [sealModelPath]: { direction: new Vector3(0, 0.42, 1), zoom: 1.02 },
   "one-pillar-pagoda-chua-mot-cot-compressed.glb": { direction: new Vector3(0, 0.3, 1), zoom: 0.68 },
-  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": { direction: new Vector3(0, 0.24, 1), zoom: 0.78 },
+  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": { direction: new Vector3(0, -1, 0.24), zoom: 0.68, targetOffset: new Vector3(0.16, 0, 0.04) },
 };
+
+const brighterModelPaths = new Set([
+  "one-pillar-pagoda-chua-mot-cot-compressed.glb",
+  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb",
+]);
 
 type ModelViewerPageProps = {
   embeddedModel?: GlbModel;
@@ -125,6 +130,8 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   const sceneRef = useRef<Scene | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const cameraRef = useRef<PerspectiveCamera | null>(null);
+  const ambientLightRef = useRef<AmbientLight | null>(null);
+  const keyLightRef = useRef<DirectionalLight | null>(null);
   const modelRef = useRef<Object3D | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const annotationsRef = useRef<Annotation[]>([]);
@@ -170,7 +177,8 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     const container = mount;
 
     const scene = new Scene();
-    scene.add(new AmbientLight("#ffffff", 1.8));
+    const ambientLight = new AmbientLight("#ffffff", 1.8);
+    scene.add(ambientLight);
 
     const keyLight = new DirectionalLight("#ffffff", 2.4);
     keyLight.position.set(4, 6, 5);
@@ -195,6 +203,8 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     sceneRef.current = scene;
     cameraRef.current = camera;
     controlsRef.current = controls;
+    ambientLightRef.current = ambientLight;
+    keyLightRef.current = keyLight;
 
     function resize() {
       camera.aspect =
@@ -245,6 +255,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     }
     setActiveAnnotation(null);
     setAnnotationPoints([]);
+    setModelLighting(selectedPath, ambientLightRef.current, keyLightRef.current);
     setStatus("loading");
     setProgress(0);
     setError("");
@@ -511,19 +522,29 @@ function frameModel(
   const center = box.getCenter(new Vector3());
   const maxSize = Math.max(size.x, size.y, size.z) || 1;
   const preset = modelPath ? modelCameraPresets[modelPath] : undefined;
+  const target = center.clone();
+  if (preset?.targetOffset) {
+    target.add(new Vector3(size.x * preset.targetOffset.x, size.y * preset.targetOffset.y, size.z * preset.targetOffset.z));
+  }
   const distance = (maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360))) * (preset?.zoom ?? 1);
   const direction = preset?.direction.clone().normalize() ?? new Vector3(1, 0.55, 1).normalize();
 
   camera.position
-    .copy(center)
+    .copy(target)
     .add(direction.multiplyScalar(distance));
   camera.near = Math.max(0.01, distance / 100);
   camera.far = distance * 100;
   camera.updateProjectionMatrix();
 
-  controls.target.copy(center);
+  controls.target.copy(target);
   controls.update();
   controls.saveState();
+}
+
+function setModelLighting(modelPath: string | undefined, ambientLight: AmbientLight | null, keyLight: DirectionalLight | null) {
+  const brighter = modelPath ? brighterModelPaths.has(modelPath) : false;
+  if (ambientLight) ambientLight.intensity = brighter ? 2.35 : 1.8;
+  if (keyLight) keyLight.intensity = brighter ? 3.1 : 2.4;
 }
 
 function focusAnnotation(
