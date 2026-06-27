@@ -1,0 +1,51 @@
+[
+  {
+    "id": "dong-son-drum",
+    "landmarkId": "ha-long-bay",
+    "name": "Trống đồng Đông Sơn",
+    "slug": "trong-dong-dong-son",
+    "period": "Văn hóa Đông Sơn",
+    "material": "Đồng",
+    "shortDescription": "Bảo vật tiêu biểu của văn minh Đông Sơn với hoa văn chim Lạc, thuyền và người múa.",
+    "culturalSignificance": "Trống đồng thể hiện kỹ thuật luyện kim, tín ngưỡng nông nghiệp và đời sống cộng đồng của cư dân Việt cổ.",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Ngoc_Lu_drum%2C_Vietnam_National_Museum_of_History.jpg/1024px-Ngoc_Lu_drum%2C_Vietnam_National_Museum_of_History.jpg",
+    "tags": ["bảo vật", "Đông Sơn", "chim Lạc"]
+  },
+  {
+    "id": "nguyen-royal-seal",
+    "landmarkId": "imperial-city-hue",
+    "name": "Ấn vàng triều Nguyễn",
+    "slug": "an-vang-trieu-nguyen",
+    "period": "Triều Nguyễn",
+    "material": "Vàng",
+    "shortDescription": "Ấn biểu trưng cho quyền lực hoàng gia và nghi thức triều chính.",
+    "culturalSignificance": "Ấn triều Nguyễn giúp kể câu chuyện về thể chế, lễ nghi và nghệ thuật chế tác cung đình.",
+    "imageUrl": "https://images.unsplash.com/photo-1599995903128-531fc7fb694b?auto=format&fit=crop&w=1200&q=80",
+    "tags": ["triều Nguyễn", "hoàng gia", "nghi lễ"]
+  },
+  {
+    "id": "hoi-an-ceramic",
+    "landmarkId": "hoi-an-ancient-town",
+    "name": "Gốm thương cảng Hội An",
+    "slug": "gom-thuong-cang-hoi-an",
+    "period": "Thế kỷ XV-XVII",
+    "material": "Gốm men",
+    "shortDescription": "Dòng gốm theo chân thuyền buôn, phản chiếu đời sống giao thương của phố cảng.",
+    "culturalSignificance": "Hiện vật gốm cho thấy Hội An là mắt xích quan trọng trong mạng lưới thương mại biển Đông.",
+    "imageUrl": "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=1200&q=80",
+    "tags": ["gốm", "thương mại", "Hội An"]
+  },
+  {
+    "id": "dragon-head-ly",
+    "landmarkId": "thang-long-citadel",
+    "name": "Đầu rồng thời Lý",
+    "slug": "dau-rong-thoi-ly",
+    "period": "Thời Lý",
+    "material": "Đất nung",
+    "shortDescription": "Trang trí kiến trúc với dáng rồng mềm mại, biểu tượng cho quyền lực và mưa thuận gió hòa.",
+    "culturalSignificance": "Đầu rồng thời Lý giúp nhận diện mỹ thuật cung đình Đại Việt thời kỳ Phật giáo hưng thịnh.",
+    "imageUrl": "https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=1200&q=80",
+    "tags": ["Thăng Long", "thời Lý", "rồng"]
+  }
+]
+

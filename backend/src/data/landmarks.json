@@ -1,0 +1,59 @@
+[
+  {
+    "id": "ha-long-bay",
+    "name": "Vịnh Hạ Long",
+    "slug": "vinh-ha-long",
+    "province": "Quảng Ninh",
+    "region": "north",
+    "coordinates": { "lat": 20.9101, "lng": 107.1839 },
+    "shortDescription": "Kỳ quan thiên nhiên với hàng nghìn đảo đá vôi, hang động và làng chài trên mặt nước xanh.",
+    "historySummary": "Vịnh Hạ Long gắn với truyền thuyết rồng mẹ hạ xuống giúp người Việt chống giặc ngoại xâm, để lại những viên ngọc hóa thành đảo đá.",
+    "tourismHighlights": ["Hang Sửng Sốt", "Đảo Ti Tốp", "Làng chài Cửa Vạn"],
+    "imageUrl": "https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80",
+    "artifactIds": ["dong-son-drum"],
+    "tags": ["thiên nhiên", "di sản", "biển đảo"]
+  },
+  {
+    "id": "imperial-city-hue",
+    "name": "Cố đô Huế",
+    "slug": "co-do-hue",
+    "province": "Thừa Thiên Huế",
+    "region": "central",
+    "coordinates": { "lat": 16.4637, "lng": 107.5909 },
+    "shortDescription": "Quần thể kinh thành, cung điện, lăng tẩm và nhã nhạc triều Nguyễn bên dòng Hương.",
+    "historySummary": "Huế từng là kinh đô của triều Nguyễn, nơi lưu giữ nghi lễ cung đình, kiến trúc hoàng gia và ký ức nhiều biến động lịch sử.",
+    "tourismHighlights": ["Đại Nội", "Lăng Tự Đức", "Sông Hương"],
+    "imageUrl": "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=1200&q=80",
+    "artifactIds": ["nguyen-royal-seal"],
+    "tags": ["kinh đô", "triều Nguyễn", "kiến trúc"]
+  },
+  {
+    "id": "hoi-an-ancient-town",
+    "name": "Phố cổ Hội An",
+    "slug": "pho-co-hoi-an",
+    "province": "Quảng Nam",
+    "region": "central",
+    "coordinates": { "lat": 15.8801, "lng": 108.338 },
+    "shortDescription": "Thương cảng cổ với nhà gỗ, hội quán, đèn lồng và nhịp sống ven sông Hoài.",
+    "historySummary": "Hội An từng là điểm gặp của thương nhân Việt, Nhật, Hoa và phương Tây, tạo nên một đô thị giao thương giàu bản sắc.",
+    "tourismHighlights": ["Chùa Cầu", "Sông Hoài", "Hội quán Phúc Kiến"],
+    "imageUrl": "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=1200&q=80",
+    "artifactIds": ["hoi-an-ceramic"],
+    "tags": ["phố cổ", "thương cảng", "đèn lồng"]
+  },
+  {
+    "id": "thang-long-citadel",
+    "name": "Hoàng thành Thăng Long",
+    "slug": "hoang-thanh-thang-long",
+    "province": "Hà Nội",
+    "region": "north",
+    "coordinates": { "lat": 21.035, "lng": 105.8401 },
+    "shortDescription": "Trung tâm quyền lực lâu đời của Đại Việt, nơi các tầng văn hóa chồng lớp qua hơn một nghìn năm.",
+    "historySummary": "Từ thời Lý, Thăng Long là trái tim chính trị của đất nước, chứng kiến nhiều triều đại xây dựng và bảo vệ kinh đô.",
+    "tourismHighlights": ["Đoan Môn", "Điện Kính Thiên", "Khu khảo cổ 18 Hoàng Diệu"],
+    "imageUrl": "https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&w=1200&q=80",
+    "artifactIds": ["dragon-head-ly"],
+    "tags": ["kinh thành", "khảo cổ", "Đại Việt"]
+  }
+]
+

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "tl-ha-long-1",
+    "targetType": "landmark",
+    "targetId": "ha-long-bay",
+    "yearLabel": "Truyền thuyết",
+    "title": "Rồng mẹ hạ xuống",
+    "description": "Người xưa kể rằng đàn rồng tạo nên những đảo đá như bức tường chắn sóng.",
+    "order": 1
+  },
+  {
+    "id": "tl-ha-long-2",
+    "targetType": "landmark",
+    "targetId": "ha-long-bay",
+    "yearLabel": "1994",
+    "title": "Di sản thiên nhiên thế giới",
+    "description": "Vịnh Hạ Long được UNESCO ghi danh, mở ra một hành trình quảng bá du lịch rộng hơn.",
+    "order": 2
+  },
+  {
+    "id": "tl-hue-1",
+    "targetType": "landmark",
+    "targetId": "imperial-city-hue",
+    "yearLabel": "1802",
+    "title": "Kinh đô triều Nguyễn",
+    "description": "Huế trở thành trung tâm chính trị và nghi lễ của vương triều Nguyễn.",
+    "order": 1
+  },
+  {
+    "id": "tl-hoian-1",
+    "targetType": "landmark",
+    "targetId": "hoi-an-ancient-town",
+    "yearLabel": "Thế kỷ XVII",
+    "title": "Thương cảng quốc tế",
+    "description": "Hội An đón thương thuyền từ nhiều nền văn hóa, tạo nên một đô thị giao thương độc đáo.",
+    "order": 1
+  },
+  {
+    "id": "tl-thanglong-1",
+    "targetType": "landmark",
+    "targetId": "thang-long-citadel",
+    "yearLabel": "1010",
+    "title": "Dời đô về Thăng Long",
+    "description": "Lý Công Uẩn chọn Thăng Long làm kinh đô, đặt nền cho trung tâm quyền lực Đại Việt.",
+    "order": 1
+  },
+  {
+    "id": "tl-drum-1",
+    "targetType": "artifact",
+    "targetId": "dong-son-drum",
+    "yearLabel": "2.000 năm trước",
+    "title": "Âm vang Đông Sơn",
+    "description": "Trống đồng xuất hiện trong nghi lễ, lễ hội và đời sống cộng đồng cư dân Việt cổ.",
+    "order": 1
+  },
+  {
+    "id": "tl-drum-2",
+    "targetType": "artifact",
+    "targetId": "dong-son-drum",
+    "yearLabel": "Ngày nay",
+    "title": "Biểu tượng văn hóa",
+    "description": "Hoa văn trống đồng tiếp tục xuất hiện trong bảo tàng, giáo dục và thiết kế đương đại.",
+    "order": 2
+  }
+]
+

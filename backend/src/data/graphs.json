@@ -1,0 +1,29 @@
+{
+  "landmark:ha-long-bay": {
+    "nodes": [
+      { "id": "ha-long", "label": "Vịnh Hạ Long", "type": "place" },
+      { "id": "dragon", "label": "Truyền thuyết rồng", "type": "idea" },
+      { "id": "unesco", "label": "UNESCO", "type": "event" },
+      { "id": "tourism", "label": "Du lịch biển đảo", "type": "idea" }
+    ],
+    "edges": [
+      { "source": "dragon", "target": "ha-long", "label": "tạo nên hình tượng" },
+      { "source": "ha-long", "target": "unesco", "label": "được ghi danh" },
+      { "source": "unesco", "target": "tourism", "label": "thúc đẩy" }
+    ]
+  },
+  "artifact:dong-son-drum": {
+    "nodes": [
+      { "id": "drum", "label": "Trống đồng", "type": "artifact" },
+      { "id": "lac-bird", "label": "Chim Lạc", "type": "idea" },
+      { "id": "festival", "label": "Nghi lễ cộng đồng", "type": "event" },
+      { "id": "bronze", "label": "Kỹ thuật luyện kim", "type": "idea" }
+    ],
+    "edges": [
+      { "source": "bronze", "target": "drum", "label": "làm nên" },
+      { "source": "drum", "target": "festival", "label": "vang lên trong" },
+      { "source": "lac-bird", "target": "drum", "label": "xuất hiện trên" }
+    ]
+  }
+}
+
