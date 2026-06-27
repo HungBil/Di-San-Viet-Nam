@@ -78,6 +78,15 @@
   padding: 0;
 }
 
+.glass-navbar-mobile-menu > * {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 2.5rem;
+  width: 100%;
+  align-items: center;
+}
+
 .glass-navbar-link,
 .glass-navbar-button {
   border-radius: 9999px;

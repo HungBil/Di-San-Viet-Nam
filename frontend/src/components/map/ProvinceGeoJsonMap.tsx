@@ -40,6 +40,10 @@ type ProvinceGeoJsonMapProps = {
 export type MapMarker = {
   address?: string;
   description?: string;
+  displayOffset?: {
+    x: number;
+    y: number;
+  };
   id: string;
   image?: string;
   latitude: number;
@@ -183,7 +187,17 @@ export function ProvinceGeoJsonMap({ activeMarkerId = null, className = "", mark
       })),
       projectedMarkers: markers.flatMap((marker) => {
         const point = projection([marker.longitude, marker.latitude]);
-        return point ? [{ ...marker, x: point[0], y: point[1] }] : [];
+        return point
+          ? [
+              {
+                ...marker,
+                x: point[0],
+                y: point[1],
+                displayX: point[0] + (marker.displayOffset?.x ?? 0),
+                displayY: point[1] + (marker.displayOffset?.y ?? 0)
+              }
+            ]
+          : [];
       })
     };
   }, [loadedProvinces, markers]);
@@ -194,8 +208,8 @@ export function ProvinceGeoJsonMap({ activeMarkerId = null, className = "", mark
   const hoveredMarker = projectedMarkers.find((marker) => marker.id === hoveredMarkerId);
   const markerTooltipPosition = hoveredMarker
     ? {
-        left: `${((viewBoxCenterX + zoom * baseMapScaleX * (hoveredMarker.x - viewBoxCenterX) + pan.x + baseMapOffsetX) / viewBoxWidth) * 100}%`,
-        top: `${((viewBoxCenterY + zoom * baseMapScaleY * (hoveredMarker.y - viewBoxCenterY) + pan.y) / viewBoxHeight) * 100}%`
+        left: `${((viewBoxCenterX + zoom * baseMapScaleX * (hoveredMarker.displayX - viewBoxCenterX) + pan.x + baseMapOffsetX) / viewBoxWidth) * 100}%`,
+        top: `${((viewBoxCenterY + zoom * baseMapScaleY * (hoveredMarker.displayY - viewBoxCenterY) + pan.y) / viewBoxHeight) * 100}%`
       }
     : null;
 
@@ -302,13 +316,41 @@ export function ProvinceGeoJsonMap({ activeMarkerId = null, className = "", mark
               );
             })}
             {projectedMarkers.map((marker) => {
+              const hasDisplayOffset = marker.x !== marker.displayX || marker.y !== marker.displayY;
+
+              return hasDisplayOffset ? (
+                <g key={`${marker.id}-anchor`} className="pointer-events-none">
+                  <line
+                    x1={marker.x}
+                    y1={marker.y}
+                    x2={marker.displayX}
+                    y2={marker.displayY}
+                    stroke="#6f5830"
+                    strokeDasharray="1.6 1.6"
+                    strokeLinecap="round"
+                    strokeWidth={0.75}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  <circle
+                    cx={marker.x}
+                    cy={marker.y}
+                    r={1.7}
+                    fill="#fffaf0"
+                    stroke="#6f5830"
+                    strokeWidth={0.9}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </g>
+              ) : null;
+            })}
+            {projectedMarkers.map((marker) => {
               const isActive = marker.id === activeMarkerId;
 
               return (
                 <g
                   key={marker.id}
                   className="cursor-pointer outline-none"
-                  transform={`translate(${marker.x} ${marker.y})`}
+                  transform={`translate(${marker.displayX} ${marker.displayY})`}
                   role="button"
                   tabIndex={0}
                   aria-label={`${marker.name}. ${marker.address ?? ""}`}
