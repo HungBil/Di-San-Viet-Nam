@@ -1,5 +1,5 @@
-import { MapPinned } from "lucide-react";
-import { lazy, Suspense, useState } from "react";
+import { Copy, MapPinned, Share2, X } from "lucide-react";
+import { ChangeEvent, lazy, Suspense, useMemo, useState } from "react";
 import {
   ProvinceGeoJsonMap,
   type MapMarker,
@@ -52,10 +52,48 @@ const markerModels: Record<string, GlbModel> = {
 };
 
 export function MapPage() {
-  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
+  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(() => {
+    const markerId = new URLSearchParams(window.location.search).get("marker");
+    return mapMarkers.find((marker) => marker.id === markerId) ?? null;
+  });
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareName, setShareName] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
+  const [shareAvatar, setShareAvatar] = useState("");
+  const [shareLink, setShareLink] = useState("");
   const selectedModel = selectedMarker
     ? markerModels[selectedMarker.id]
     : undefined;
+  const shareSummary = selectedMarker
+    ? `${selectedMarker.name} - ${selectedMarker.address}`
+    : "Chọn một địa điểm trên bản đồ để chia sẻ.";
+  const canShare = Boolean(selectedMarker);
+  const shareUrl = useMemo(() => {
+    if (!selectedMarker) return "";
+    const params = new URLSearchParams({
+      name: shareName.trim() || "Khách tham quan",
+      message:
+        shareMessage.trim() ||
+        "Mình vừa khám phá hiện vật và không gian 3D này trên Di Sản Việt.",
+      avatar: shareAvatar,
+      title: selectedMarker.name,
+      summary: shareSummary,
+      marker: selectedMarker.id,
+    });
+    return `${window.location.origin}/share/card?${params.toString()}`;
+  }, [selectedMarker, shareAvatar, shareMessage, shareName, shareSummary]);
+
+  function createShareLink() {
+    if (!shareUrl) return;
+    setShareLink(shareUrl);
+    void navigator.clipboard?.writeText(shareUrl).catch(() => undefined);
+  }
+
+  function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    resizeAvatar(file).then(setShareAvatar).catch(() => setShareAvatar(""));
+  }
 
   return (
     <div className="heritage-surface -mt-[88px] min-h-screen pt-[40px]">
@@ -66,6 +104,15 @@ export function MapPage() {
               Khám phá Việt Nam
             </h1>
           </div>
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded bg-[var(--heritage-brown)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--heritage-bronze)] disabled:cursor-not-allowed disabled:opacity-45"
+            disabled={!canShare}
+            onClick={() => setShareOpen(true)}
+            title={canShare ? "Chia sẻ địa điểm đang chọn" : "Chọn một marker trước"}
+          >
+            <Share2 size={17} />
+            Chia sẻ
+          </button>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[2fr_3fr]">
@@ -111,6 +158,153 @@ export function MapPage() {
           </div>
         </div>
       </section>
+
+      {shareOpen && selectedMarker ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4 py-8">
+          <div className="w-full max-w-4xl overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[var(--heritage-paper)] shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+            <div className="flex items-center justify-between border-b border-[var(--heritage-line)] px-5 py-4">
+              <h2 className="font-serif text-2xl text-[var(--heritage-brown)]">
+                Chia sẻ trải nghiệm
+              </h2>
+              <button
+                className="grid h-9 w-9 place-items-center rounded bg-white text-[var(--heritage-brown)]"
+                onClick={() => setShareOpen(false)}
+                aria-label="Đóng"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid gap-5 p-5 lg:grid-cols-[320px_1fr]">
+              <div className="space-y-4">
+                <label className="block text-sm font-semibold text-[var(--heritage-brown)]">
+                  Tên của bạn
+                  <input
+                    className="mt-2 w-full rounded border border-[var(--heritage-line)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--heritage-bronze)]"
+                    value={shareName}
+                    onChange={(event) => setShareName(event.target.value)}
+                    placeholder="Ví dụ: Cô Lan"
+                  />
+                </label>
+                <label className="block text-sm font-semibold text-[var(--heritage-brown)]">
+                  Avatar
+                  <input
+                    className="mt-2 w-full text-sm text-[var(--heritage-muted)]"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                  />
+                </label>
+                <label className="block text-sm font-semibold text-[var(--heritage-brown)]">
+                  Nội dung chia sẻ
+                  <textarea
+                    className="mt-2 min-h-32 w-full resize-none rounded border border-[var(--heritage-line)] bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-[var(--heritage-bronze)]"
+                    value={shareMessage}
+                    onChange={(event) => setShareMessage(event.target.value)}
+                    placeholder="Bạn muốn nói gì về địa điểm/hiện vật này?"
+                  />
+                </label>
+                <button
+                  className="inline-flex w-full items-center justify-center gap-2 rounded bg-[var(--heritage-brown)] px-4 py-3 text-sm font-semibold text-white"
+                  onClick={createShareLink}
+                >
+                  <Copy size={16} />
+                  Tạo link chia sẻ
+                </button>
+                {shareLink ? (
+                  <input
+                    className="w-full rounded border border-[var(--heritage-line)] bg-white px-3 py-2 text-xs text-[var(--heritage-muted)]"
+                    readOnly
+                    value={shareLink}
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                ) : null}
+              </div>
+
+              <ShareCard
+                avatar={shareAvatar}
+                name={shareName || "Khách tham quan"}
+                message={
+                  shareMessage ||
+                  "Mình vừa khám phá hiện vật và không gian 3D này trên Di Sản Việt."
+                }
+                summary={shareSummary}
+                title={selectedMarker.name}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function ShareCard({
+  avatar,
+  message,
+  name,
+  summary,
+  title,
+}: {
+  avatar: string;
+  message: string;
+  name: string;
+  summary: string;
+  title: string;
+}) {
+  return (
+    <article className="rounded-lg border border-[var(--heritage-line)] bg-[#fff8eb] p-6 shadow-[0_18px_50px_rgba(111,86,45,0.14)]">
+      <p className="font-serif text-4xl text-[var(--heritage-bronze)]">”</p>
+      <p className="mt-4 font-serif text-2xl leading-9 text-[var(--heritage-brown)]">
+        {message}
+      </p>
+      <div className="mt-8 flex items-center gap-4">
+        <div className="h-14 w-14 overflow-hidden rounded-full bg-[var(--heritage-paper-deep)]">
+          {avatar ? (
+            <img className="h-full w-full object-cover" src={avatar} alt="" />
+          ) : null}
+        </div>
+        <div>
+          <p className="font-semibold text-[var(--heritage-brown)]">{name}</p>
+          <p className="mt-1 text-sm font-semibold text-[var(--heritage-muted)]">
+            {title}
+          </p>
+          <p className="mt-1 text-xs text-[var(--heritage-muted)]">{summary}</p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function resizeAvatar(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const image = new Image();
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      image.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 96;
+        canvas.height = 96;
+        const context = canvas.getContext("2d");
+        if (!context) return reject(new Error("Không thể đọc ảnh"));
+        const size = Math.min(image.width, image.height);
+        context.drawImage(
+          image,
+          (image.width - size) / 2,
+          (image.height - size) / 2,
+          size,
+          size,
+          0,
+          0,
+          96,
+          96,
+        );
+        resolve(canvas.toDataURL("image/jpeg", 0.72));
+      };
+      image.onerror = reject;
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
 }
