@@ -1,4 +1,4 @@
-import { Box, Camera as CameraIcon, Maximize2, RefreshCw, RotateCcw, ScanLine, Upload } from "lucide-react";
+import { Box, Maximize2, RefreshCw, RotateCcw, ScanLine, Upload } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AmbientLight,
@@ -97,7 +97,7 @@ type ModelViewerPageProps = {
 };
 
 type ArRuntime = {
-  capture: () => void;
+  capture: () => Promise<void>;
   end: () => void;
   start: () => Promise<void>;
 };
@@ -441,27 +441,100 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       arDrag = null;
     }
 
-    function captureArPhoto() {
+    async function captureArPhoto() {
+      const width = renderer.domElement.width || overlayRoot.clientWidth || window.innerWidth;
+      const height = renderer.domElement.height || overlayRoot.clientHeight || window.innerHeight;
+      const snapshotCanvas = document.createElement("canvas");
+      snapshotCanvas.width = width;
+      snapshotCanvas.height = height;
+      const context = snapshotCanvas.getContext("2d");
+      if (!context) {
+        setArMessage("Không thể tạo ảnh chụp AR trên trình duyệt này.");
+        return;
+      }
+
       try {
-        renderer.domElement.toBlob((blob) => {
-          if (!blob) {
-            setArMessage("Không thể chụp ảnh AR trên trình duyệt này.");
-            return;
+        setArMessage("Đang chụp ảnh AR...");
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: width },
+            height: { ideal: height },
+          },
+        });
+
+        try {
+          const video = document.createElement("video");
+          video.muted = true;
+          video.playsInline = true;
+          video.srcObject = stream;
+          await video.play();
+          await new Promise<void>((resolve) => {
+            if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+              resolve();
+              return;
+            }
+            video.onloadeddata = () => resolve();
+          });
+
+          const videoWidth = video.videoWidth || width;
+          const videoHeight = video.videoHeight || height;
+          const sourceRatio = videoWidth / videoHeight;
+          const targetRatio = width / height;
+          let sourceX = 0;
+          let sourceY = 0;
+          let sourceWidth = videoWidth;
+          let sourceHeight = videoHeight;
+
+          if (sourceRatio > targetRatio) {
+            sourceWidth = videoHeight * targetRatio;
+            sourceX = (videoWidth - sourceWidth) / 2;
+          } else {
+            sourceHeight = videoWidth / targetRatio;
+            sourceY = (videoHeight - sourceHeight) / 2;
           }
 
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = `di-san-viet-ar-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-          setArMessage("Đã chụp ảnh AR.");
-        }, "image/png");
+          context.drawImage(
+            video,
+            sourceX,
+            sourceY,
+            sourceWidth,
+            sourceHeight,
+            0,
+            0,
+            width,
+            height,
+          );
+          context.drawImage(renderer.domElement, 0, 0, width, height);
+        } finally {
+          stream.getTracks().forEach((track) => track.stop());
+        }
       } catch {
-        setArMessage("Trình duyệt không cho phép chụp ảnh AR.");
+        try {
+          context.drawImage(renderer.domElement, 0, 0, width, height);
+        } catch {
+          setArMessage("Trình duyệt không cho phép chụp ảnh AR.");
+          return;
+        }
       }
+
+      snapshotCanvas.toBlob((blob) => {
+        if (!blob) {
+          setArMessage("Không thể lưu ảnh AR trên trình duyệt này.");
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `di-san-viet-ar-${new Date().toISOString().replace(/[:.]/g, "-")}.png`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        setArMessage("Đã chụp ảnh AR.");
+      }, "image/png");
     }
 
     function placeModelAtReticle() {
@@ -744,7 +817,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   }
 
   function captureArPhoto() {
-    arRuntimeRef.current?.capture();
+    void arRuntimeRef.current?.capture();
   }
 
   function toggleAutoRotate() {
@@ -907,26 +980,62 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
                   : error || "Chọn model để bắt đầu")}
             </p>
           </div>
-          <div className="absolute bottom-4 right-4 flex gap-2">
-            <button
-              className={`inline-flex h-10 items-center gap-2 rounded px-3 text-sm font-semibold shadow-lg ${isArRunning ? "bg-[#d8ad52] text-[#2d2820]" : "bg-white text-[#102832]"}`}
-              onClick={toggleAr}
-              aria-label={isArRunning ? "Thoát chế độ AR" : "Mở chế độ AR"}
-              title={isArRunning ? "Thoát AR" : "Xem trong không gian AR"}
-            >
-              <ScanLine size={18} />
-              {isArRunning ? "Thoát AR" : "Mở AR"}
-            </button>
-            {isArRunning && (
+          {isArRunning ? (
+            <>
               <button
-                className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832] shadow-lg"
-                onClick={captureArPhoto}
-                aria-label="Chụp ảnh AR"
-                title="Chụp ảnh AR"
+                className="absolute bottom-5 left-4 inline-flex h-11 items-center gap-2 rounded-full bg-[#d8ad52] px-4 text-sm font-semibold text-[#2d2820] shadow-lg"
+                onClick={toggleAr}
+                aria-label="Thoát chế độ AR"
+                title="Thoát AR"
               >
-                <CameraIcon size={18} />
+                <ScanLine size={18} />
+                Thoát AR
               </button>
-            )}
+              <button
+                className="absolute bottom-5 left-1/2 grid h-[74px] w-[74px] -translate-x-1/2 place-items-center rounded-full border-4 border-white bg-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur"
+                onClick={captureArPhoto}
+                aria-label="Chụp ảnh camera AR"
+                title="Chụp ảnh camera AR"
+              >
+                <span className="block h-[54px] w-[54px] rounded-full bg-white shadow-inner" />
+              </button>
+              <div className="absolute bottom-5 right-4 flex gap-2">
+                <button
+                  className="grid h-11 w-11 place-items-center rounded-full bg-white text-[#102832] shadow-lg"
+                  onClick={() => {
+                    if (controlsRef.current) controlsRef.current.autoRotate = false;
+                    setIsAutoRotating(false);
+                    frameModel(
+                      modelRef.current,
+                      cameraRef.current,
+                      controlsRef.current,
+                      selectedPath,
+                    );
+                  }}
+                  aria-label="Căn lại model"
+                >
+                  <Maximize2 size={18} />
+                </button>
+                <button
+                  className="grid h-11 w-11 place-items-center rounded-full bg-white text-[#102832] shadow-lg"
+                  onClick={resetCamera}
+                  aria-label="Reset camera"
+                >
+                  <RotateCcw size={18} />
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="absolute bottom-4 right-4 flex gap-2">
+              <button
+                className="inline-flex h-10 items-center gap-2 rounded bg-white px-3 text-sm font-semibold text-[#102832] shadow-lg"
+                onClick={toggleAr}
+                aria-label="Mở chế độ AR"
+                title="Xem trong không gian AR"
+              >
+                <ScanLine size={18} />
+                Mở AR
+              </button>
             <button
               className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]"
               onClick={() => {
@@ -963,7 +1072,8 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
             >
               <RotateCcw size={18} />
             </button>
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </section>

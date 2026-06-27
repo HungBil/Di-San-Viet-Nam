@@ -21,6 +21,20 @@ const thangLongCitadel: MapMarker = {
   address: "19C Hoàng Diệu, phường Điện Biên, quận Ba Đình, Hà Nội",
 };
 
+const onePillarPagoda: MapMarker = {
+  id: "one-pillar-pagoda",
+  name: "Chùa Một Cột (Liên Hoa Đài)",
+  image: "/images/chua-mot-cot.webp",
+  latitude: 21.03583,
+  longitude: 105.833622,
+  address:
+    "Phố Chùa Một Cột, phường Đội Cấn, quận Ba Đình, Hà Nội",
+  displayOffset: {
+    x: -3,
+    y: 2.5,
+  },
+};
+
 const hoaKhiemPalace: MapMarker = {
   id: "hoa-khiem-palace",
   name: "Điện Hòa Khiêm – Lăng Tự Đức",
@@ -30,7 +44,22 @@ const hoaKhiemPalace: MapMarker = {
   address: "Đường Đoàn Nhữ Hải, Thủy Xuân, Thành phố Huế, Thừa Thiên Huế",
 };
 
-const mapMarkers = [thangLongCitadel, hoaKhiemPalace];
+const independencePalace: MapMarker = {
+  id: "independence-palace",
+  name: "Dinh Độc Lập",
+  image: "/images/dinh-doc-lap.webp",
+  latitude: 10.777108,
+  longitude: 106.695441,
+  address:
+    "135 Nam Kỳ Khởi Nghĩa, phường Bến Thành, Quận 1, Thành phố Hồ Chí Minh",
+};
+
+const mapMarkers = [
+  thangLongCitadel,
+  onePillarPagoda,
+  hoaKhiemPalace,
+  independencePalace,
+];
 
 const sealModel = {
   name: "Ấn Sắc mệnh chi bảo",
@@ -46,9 +75,25 @@ const hoaKhiemModel = {
   size: 20792420,
 };
 
+const onePillarPagodaModel = {
+  name: "Chùa Một Cột",
+  path: "one-pillar-pagoda-chua-mot-cot-compressed.glb",
+  url: "/models/one-pillar-pagoda-chua-mot-cot-compressed.glb",
+  size: 2991400,
+};
+
+const tank843Model = {
+  name: "Xe tăng 843",
+  path: "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb",
+  url: "/models/tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb",
+  size: 6058444,
+};
+
 const markerModels: Record<string, GlbModel> = {
   [thangLongCitadel.id]: sealModel,
+  [onePillarPagoda.id]: onePillarPagodaModel,
   [hoaKhiemPalace.id]: hoaKhiemModel,
+  [independencePalace.id]: tank843Model,
 };
 
 export function MapPage() {
