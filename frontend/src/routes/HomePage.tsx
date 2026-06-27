@@ -13,6 +13,7 @@ import {
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CommunityExperiences } from "../components/community/CommunityExperiences";
+import { HomeFooter } from "../components/layout/HomeFooter";
 import { ProvinceGeoJsonMap } from "../components/map/ProvinceGeoJsonMap";
 
 const heroImage = "/images/van-mieu-quoc-tu-giam.webp";
@@ -268,6 +269,7 @@ export function HomePage() {
 
         <CommunityExperiences />
       </div>
+      <HomeFooter />
     </div>
   );
 }
