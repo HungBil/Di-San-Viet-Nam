@@ -27,11 +27,12 @@ type Annotation = {
 const sealModelPath = "Ấn_Sắc_mệnh_chi_bảo-compressed.glb";
 const hoaKhiemModelPath =
   "Hoa_Khiem_Temple_-_Tomb_of_Emperor_Tu_Duc_compressed.glb";
+const tankModelPath = "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb";
 const modelTitles: Record<string, string> = {
   [sealModelPath]: "Ấn Sắc mệnh chi bảo",
   [hoaKhiemModelPath]: "Lăng vua Tự Đức - khu Hòa Khiêm",
   "one-pillar-pagoda-chua-mot-cot-compressed.glb": "Chùa Một Cột",
-  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": "Xe tăng 843",
+  [tankModelPath]: "Xe tăng 843",
 };
 
 const localModels: GlbModel[] = [
@@ -55,8 +56,8 @@ const localModels: GlbModel[] = [
   },
   {
     name: "Xe tăng 843",
-    path: "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb",
-    url: "/models/tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb",
+    path: tankModelPath,
+    url: `/models/${tankModelPath}`,
     size: 6058444,
   },
 ];
@@ -71,16 +72,16 @@ const modelCameraPresets: Record<
     direction: new Vector3(0, 0.3, 1),
     zoom: 0.68,
   },
-  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": {
-    direction: new Vector3(0, -1, 0.24),
-    zoom: 0.68,
-    targetOffset: new Vector3(0.16, 0, 0.04),
+  [tankModelPath]: {
+    direction: new Vector3(0, -1, 0.18),
+    zoom: 0.86,
+    targetOffset: new Vector3(0.08, 0, 0.02),
   },
 };
 
 const brighterModelPaths = new Set([
   "one-pillar-pagoda-chua-mot-cot-compressed.glb",
-  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb",
+  tankModelPath,
 ]);
 
 type ModelViewerPageProps = {
@@ -145,6 +146,7 @@ export function ModelViewerPage({ autoNarrateAnnotations = false, embeddedModel 
   const ambientLightRef = useRef<AmbientLight | null>(null);
   const keyLightRef = useRef<DirectionalLight | null>(null);
   const sealFillLightsRef = useRef<DirectionalLight[]>([]);
+  const tankFillLightsRef = useRef<DirectionalLight[]>([]);
   const modelRef = useRef<Object3D | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const annotationsRef = useRef<Annotation[]>([]);
@@ -212,6 +214,18 @@ export function ModelViewerPage({ autoNarrateAnnotations = false, embeddedModel 
     sealFillLights[3].position.set(0, 1.5, -8);
     sealFillLights.forEach((light) => scene.add(light));
 
+    const tankFillLights = [
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+    ];
+    tankFillLights[0].position.set(10, 3, 0);
+    tankFillLights[1].position.set(-10, 3, 0);
+    tankFillLights[2].position.set(0, 3, 10);
+    tankFillLights[3].position.set(0, 3, -10);
+    tankFillLights.forEach((light) => scene.add(light));
+
     const camera = new PerspectiveCamera(45, 1, 0.01, 1000);
     camera.position.set(3, 2, 4);
 
@@ -235,6 +249,7 @@ export function ModelViewerPage({ autoNarrateAnnotations = false, embeddedModel 
     ambientLightRef.current = ambientLight;
     keyLightRef.current = keyLight;
     sealFillLightsRef.current = sealFillLights;
+    tankFillLightsRef.current = tankFillLights;
 
     function resize() {
       camera.aspect =
@@ -291,6 +306,7 @@ export function ModelViewerPage({ autoNarrateAnnotations = false, embeddedModel 
       ambientLightRef.current,
       keyLightRef.current,
       sealFillLightsRef.current,
+      tankFillLightsRef.current,
     );
     setStatus("loading");
     setProgress(0);
@@ -653,12 +669,16 @@ function setModelLighting(
   ambientLight: AmbientLight | null,
   keyLight: DirectionalLight | null,
   sealFillLights: DirectionalLight[],
+  tankFillLights: DirectionalLight[],
 ) {
   const brighter = modelPath ? brighterModelPaths.has(modelPath) : false;
   if (ambientLight) ambientLight.intensity = brighter ? 2.35 : 1.8;
   if (keyLight) keyLight.intensity = brighter ? 3.1 : 2.4;
   sealFillLights.forEach((light) => {
     light.intensity = modelPath === sealModelPath ? 1.15 : 0;
+  });
+  tankFillLights.forEach((light) => {
+    light.intensity = modelPath === tankModelPath ? 1.35 : 0;
   });
 }
 
