@@ -1,7 +1,8 @@
 import { MapPinned } from "lucide-react";
-import { useState } from "react";
-import { HeritageModelViewer } from "../components/map/HeritageModelViewer";
+import { lazy, Suspense, useState } from "react";
 import { ProvinceGeoJsonMap, type MapMarker } from "../components/map/ProvinceGeoJsonMap";
+
+const EmbeddedModelViewer = lazy(() => import("./ModelViewerPage").then((module) => ({ default: module.ModelViewerPage })));
 
 const thangLongCitadel: MapMarker = {
   id: "thang-long-citadel",
@@ -12,7 +13,12 @@ const thangLongCitadel: MapMarker = {
   address: "19C Hoàng Diệu, phường Điện Biên, quận Ba Đình, Hà Nội"
 };
 
-const sealModelUrl = "/models/%E1%BA%A4n_S%E1%BA%AFc_m%E1%BB%87nh_chi_b%E1%BA%A3o-compressed.glb";
+const sealModel = {
+  name: "Ấn Sắc mệnh chi bảo",
+  path: "Ấn_Sắc_mệnh_chi_bảo-compressed.glb",
+  url: "/models/%E1%BA%A4n_S%E1%BA%AFc_m%E1%BB%87nh_chi_b%E1%BA%A3o-compressed.glb",
+  size: 7848516
+};
 
 export function MapPage() {
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
@@ -51,7 +57,9 @@ export function MapPage() {
 
           <div className="min-w-0">
             {selectedMarker ? (
-              <HeritageModelViewer src={sealModelUrl} title="Ấn Sắc mệnh chi bảo" />
+              <Suspense fallback={<div className="h-[620px] animate-pulse rounded-lg bg-[var(--heritage-paper-deep)]" />}>
+                <EmbeddedModelViewer embeddedModel={sealModel} />
+              </Suspense>
             ) : (
               <div className="grid h-[620px] min-h-[620px] place-items-center overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[var(--heritage-paper-deep)] p-8 text-center shadow-[0_20px_48px_rgba(45,40,32,0.14)]">
                 <div className="max-w-sm">
