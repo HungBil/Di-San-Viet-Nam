@@ -1,4 +1,4 @@
-import { Box, Maximize2, RefreshCw, RotateCcw, Upload } from "lucide-react";
+import { Box, Maximize2, RefreshCw, RotateCcw, Square, Upload, Volume2 } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AmbientLight,
@@ -13,6 +13,7 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { useAnnotationVoice } from "../components/voice/useAnnotationVoice";
 import type { GlbModel } from "../lib/types";
 
 type LoadStatus = "idle" | "loading" | "ready" | "error";
@@ -83,6 +84,7 @@ const brighterModelPaths = new Set([
 ]);
 
 type ModelViewerPageProps = {
+  autoNarrateAnnotations?: boolean;
   embeddedModel?: GlbModel;
 };
 
@@ -135,13 +137,14 @@ const annotationSets: Record<string, Annotation[]> = {
   ],
 };
 
-export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
+export function ModelViewerPage({ autoNarrateAnnotations = false, embeddedModel }: ModelViewerPageProps = {}) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<Scene | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const cameraRef = useRef<PerspectiveCamera | null>(null);
   const ambientLightRef = useRef<AmbientLight | null>(null);
   const keyLightRef = useRef<DirectionalLight | null>(null);
+  const sealFillLightsRef = useRef<DirectionalLight[]>([]);
   const modelRef = useRef<Object3D | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const annotationsRef = useRef<Annotation[]>([]);
@@ -173,6 +176,8 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   const activePoint = annotations.find(
     (point) => point.annotation.id === activeAnnotation?.id,
   );
+  const { speakAnnotation, stopAnnotationVoice, voiceState } =
+    useAnnotationVoice(autoNarrateAnnotations);
 
   useEffect(() => {
     annotationsRef.current = annotationSets[selectedPath ?? ""] ?? [];
@@ -194,6 +199,18 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     const keyLight = new DirectionalLight("#ffffff", 2.4);
     keyLight.position.set(4, 6, 5);
     scene.add(keyLight);
+
+    const sealFillLights = [
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+    ];
+    sealFillLights[0].position.set(8, 1.5, 0);
+    sealFillLights[1].position.set(-8, 1.5, 0);
+    sealFillLights[2].position.set(0, 1.5, 8);
+    sealFillLights[3].position.set(0, 1.5, -8);
+    sealFillLights.forEach((light) => scene.add(light));
 
     const camera = new PerspectiveCamera(45, 1, 0.01, 1000);
     camera.position.set(3, 2, 4);
@@ -217,6 +234,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     controlsRef.current = controls;
     ambientLightRef.current = ambientLight;
     keyLightRef.current = keyLight;
+    sealFillLightsRef.current = sealFillLights;
 
     function resize() {
       camera.aspect =
@@ -255,6 +273,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   useEffect(() => {
     if (!selectedUrl || !sceneRef.current) return;
 
+    if (autoNarrateAnnotations) stopAnnotationVoice();
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath("/draco/");
     const loader = new GLTFLoader();
@@ -271,6 +290,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       selectedPath,
       ambientLightRef.current,
       keyLightRef.current,
+      sealFillLightsRef.current,
     );
     setStatus("loading");
     setProgress(0);
@@ -305,7 +325,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       cancelled = true;
       dracoLoader.dispose();
     };
-  }, [selectedUrl]);
+  }, [autoNarrateAnnotations, selectedPath, selectedUrl, stopAnnotationVoice]);
 
   function chooseModel(model: GlbModel) {
     objectUrlRef.current && URL.revokeObjectURL(objectUrlRef.current);
@@ -330,7 +350,18 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       modelRef.current,
       cameraRef.current,
       controlsRef.current,
+      selectedPath,
     );
+    if (autoNarrateAnnotations) {
+      void speakAnnotation(
+        `Di tích: ${selectedName}. Điểm thuyết minh: ${annotation.title}. ${annotation.body}`,
+      );
+    }
+  }
+
+  function closeAnnotation() {
+    setActiveAnnotation(null);
+    if (autoNarrateAnnotations) stopAnnotationVoice();
   }
 
   function toggleAutoRotate() {
@@ -470,7 +501,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
                 </h2>
                 <button
                   className="text-sm text-white/65 hover:text-white"
-                  onClick={() => setActiveAnnotation(null)}
+                  onClick={closeAnnotation}
                   aria-label="Đóng chú thích"
                 >
                   Đóng
@@ -531,6 +562,27 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
               <RotateCcw size={18} />
             </button>
           </div>
+          {autoNarrateAnnotations && voiceState.phase !== "idle" ? (
+            <div className="absolute bottom-4 left-4 flex max-w-[calc(100%-8.5rem)] items-center gap-3 rounded bg-black/65 px-3 py-2 text-white shadow-soft backdrop-blur">
+              <Volume2 size={17} className="shrink-0 text-gold" />
+              <p className="min-w-0 truncate text-xs">
+                {voiceState.phase === "loading"
+                  ? "Đang tạo giọng..."
+                  : voiceState.phase === "speaking"
+                    ? "Đang đọc chú thích"
+                    : voiceState.message ?? "Không phát được giọng đọc"}
+              </p>
+              <button
+                type="button"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded bg-white text-[#102832] transition hover:bg-gold"
+                onClick={stopAnnotationVoice}
+                aria-label="Dừng giọng đọc"
+                title="Dừng"
+              >
+                <Square size={13} fill="currentColor" />
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>
@@ -600,10 +652,14 @@ function setModelLighting(
   modelPath: string | undefined,
   ambientLight: AmbientLight | null,
   keyLight: DirectionalLight | null,
+  sealFillLights: DirectionalLight[],
 ) {
   const brighter = modelPath ? brighterModelPaths.has(modelPath) : false;
   if (ambientLight) ambientLight.intensity = brighter ? 2.35 : 1.8;
   if (keyLight) keyLight.intensity = brighter ? 3.1 : 2.4;
+  sealFillLights.forEach((light) => {
+    light.intensity = modelPath === sealModelPath ? 1.15 : 0;
+  });
 }
 
 function focusAnnotation(
@@ -611,6 +667,7 @@ function focusAnnotation(
   model: Object3D | null,
   camera: PerspectiveCamera | null,
   controls: OrbitControls | null,
+  modelPath?: string,
 ) {
   if (!model || !camera || !controls) return;
 
@@ -619,7 +676,11 @@ function focusAnnotation(
   const center = box.getCenter(new Vector3());
   const maxSize = Math.max(size.x, size.y, size.z) || 1;
   const target = annotation.position.clone();
-  const direction = target.clone().sub(center);
+  const preset = modelPath ? modelCameraPresets[modelPath] : undefined;
+  const direction =
+    modelPath === hoaKhiemModelPath && preset
+      ? preset.direction.clone()
+      : target.clone().sub(center);
 
   if (direction.lengthSq() < 0.0001) {
     direction.copy(camera.position).sub(target);

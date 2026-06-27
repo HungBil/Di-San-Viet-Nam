@@ -4,6 +4,7 @@
 node_modules/
 dist/
 build/
+.test-build/
 .venv/
 *.egg-info/
 __pycache__/
@@ -14,4 +15,6 @@ __pycache__/
 .agents
 data/
 *.glb
+!frontend/public/models/
+!frontend/public/models/*.glb
 *-dev*.log

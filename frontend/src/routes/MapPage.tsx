@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  Copy,
   Landmark,
   Loader2,
   MapPinned,
@@ -7,12 +8,21 @@ import {
   MessageCircle,
   Mic,
   Send,
+  Share2,
   Sparkles,
   Volume2,
   VolumeX,
   X,
 } from "lucide-react";
-import { FormEvent, lazy, Suspense, useEffect, useRef, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   ProvinceGeoJsonMap,
   type MapMarker,
@@ -111,17 +121,60 @@ const markerGuideTargets: Record<string, GuideTarget> = {
 };
 
 export function MapPage() {
-  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
+  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(() => {
+    const markerId = new URLSearchParams(window.location.search).get("marker");
+    return mapMarkers.find((marker) => marker.id === markerId) ?? null;
+  });
   const [isAgentOpen, setIsAgentOpen] = useState(false);
-  const selectedModel = selectedMarker
-    ? markerModels[selectedMarker.id]
-    : undefined;
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareName, setShareName] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
+  const [shareAvatar, setShareAvatar] = useState("");
+  const [shareLink, setShareLink] = useState("");
+  const [shareError, setShareError] = useState("");
+
+  const selectedModel = selectedMarker ? markerModels[selectedMarker.id] : undefined;
   const guideTarget = selectedMarker
-    ? markerGuideTargets[selectedMarker.id]
+    ? markerGuideTargets[selectedMarker.id] ?? defaultGuideTarget
     : defaultGuideTarget;
+  const shareSummary = selectedMarker
+    ? `${selectedMarker.name} - ${selectedMarker.address ?? ""}`
+    : "Chọn một địa điểm trên bản đồ để chia sẻ.";
+  const canShare = Boolean(selectedMarker);
 
   function openAgentChat() {
     setIsAgentOpen(true);
+  }
+
+  function createShareLink() {
+    if (!selectedMarker) return;
+    setShareError("");
+    api
+      .createShareCard({
+        address: selectedMarker.address ?? "",
+        avatar: shareAvatar,
+        image: selectedMarker.image ?? "",
+        latitude: selectedMarker.latitude,
+        longitude: selectedMarker.longitude,
+        marker: selectedMarker.id,
+        message:
+          shareMessage.trim() ||
+          "Mình vừa khám phá hiện vật và không gian 3D này trên Di Sản Việt.",
+        name: shareName.trim() || "Khách tham quan",
+        summary: shareSummary,
+        title: selectedMarker.name,
+      })
+      .then((share) => {
+        setShareLink(share.url);
+        void navigator.clipboard?.writeText(share.url).catch(() => undefined);
+      })
+      .catch(() => setShareError("Chưa tạo được link chia sẻ."));
+  }
+
+  function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    resizeAvatar(file).then(setShareAvatar).catch(() => setShareAvatar(""));
   }
 
   return (
@@ -133,15 +186,27 @@ export function MapPage() {
               Khám phá Việt Nam
             </h1>
           </div>
-          <button
-            type="button"
-            onClick={openAgentChat}
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-[var(--heritage-brown)] px-4 py-3 text-sm font-semibold text-[var(--heritage-white)] shadow-[0_12px_28px_rgba(45,40,32,0.16)] transition hover:bg-[var(--heritage-bronze)] focus:outline-none focus:ring-2 focus:ring-[var(--heritage-bronze)] focus:ring-offset-2 focus:ring-offset-[var(--heritage-paper-light)] sm:self-end"
-            aria-label="Nói chuyện với hướng dẫn viên AI"
-          >
-            <MessageCircle size={18} strokeWidth={1.8} />
-            Nói chuyện với AI
-          </button>
+          <div className="flex flex-wrap gap-3 sm:self-end">
+            <button
+              type="button"
+              onClick={openAgentChat}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-[var(--heritage-brown)] px-4 py-3 text-sm font-semibold text-[var(--heritage-white)] shadow-[0_12px_28px_rgba(45,40,32,0.16)] transition hover:bg-[var(--heritage-bronze)] focus:outline-none focus:ring-2 focus:ring-[var(--heritage-bronze)] focus:ring-offset-2 focus:ring-offset-[var(--heritage-paper-light)]"
+              aria-label="Nói chuyện với hướng dẫn viên AI"
+            >
+              <MessageCircle size={18} strokeWidth={1.8} />
+              Nói chuyện với AI
+            </button>
+            <button
+              className="inline-flex items-center justify-center gap-2 rounded bg-[var(--heritage-brown)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--heritage-bronze)] disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={!canShare}
+              onClick={() => setShareOpen(true)}
+              title={canShare ? "Chia sẻ địa điểm đang chọn" : "Chọn một marker trước"}
+              type="button"
+            >
+              <Share2 size={17} />
+              Chia sẻ
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[2fr_3fr]">
@@ -162,6 +227,7 @@ export function MapPage() {
                 }
               >
                 <EmbeddedModelViewer
+                  autoNarrateAnnotations
                   key={selectedModel.path}
                   embeddedModel={selectedModel}
                 />
@@ -194,6 +260,94 @@ export function MapPage() {
           />
         ) : null}
       </section>
+
+      {shareOpen && selectedMarker ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 px-4 py-8">
+          <div className="w-full max-w-4xl overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[var(--heritage-paper)] shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+            <div className="flex items-center justify-between border-b border-[var(--heritage-line)] px-5 py-4">
+              <h2 className="font-serif text-2xl text-[var(--heritage-brown)]">
+                Chia sẻ trải nghiệm
+              </h2>
+              <button
+                className="grid h-9 w-9 place-items-center rounded bg-white text-[var(--heritage-brown)]"
+                onClick={() => setShareOpen(false)}
+                aria-label="Đóng"
+                type="button"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid gap-5 p-5 lg:grid-cols-[320px_1fr]">
+              <div className="space-y-4">
+                <label className="block text-sm font-semibold text-[var(--heritage-brown)]">
+                  Tên của bạn
+                  <input
+                    className="mt-2 w-full rounded border border-[var(--heritage-line)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--heritage-bronze)]"
+                    value={shareName}
+                    onChange={(event) => setShareName(event.target.value)}
+                    placeholder="Ví dụ: Cô Lan"
+                  />
+                </label>
+                <label className="block text-sm font-semibold text-[var(--heritage-brown)]">
+                  Avatar
+                  <input
+                    className="mt-2 w-full text-sm text-[var(--heritage-muted)]"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                  />
+                </label>
+                <label className="block text-sm font-semibold text-[var(--heritage-brown)]">
+                  Nội dung chia sẻ
+                  <textarea
+                    className="mt-2 min-h-32 w-full resize-none rounded border border-[var(--heritage-line)] bg-white px-3 py-2 text-sm leading-6 outline-none focus:border-[var(--heritage-bronze)]"
+                    value={shareMessage}
+                    onChange={(event) => setShareMessage(event.target.value)}
+                    placeholder="Bạn muốn nói gì về địa điểm/hiện vật này?"
+                  />
+                </label>
+                <button
+                  className="inline-flex w-full items-center justify-center gap-2 rounded bg-[var(--heritage-brown)] px-4 py-3 text-sm font-semibold text-white"
+                  onClick={createShareLink}
+                  type="button"
+                >
+                  <Copy size={16} />
+                  Tạo link chia sẻ
+                </button>
+                {shareLink ? (
+                  <input
+                    className="w-full rounded border border-[var(--heritage-line)] bg-white px-3 py-2 text-xs text-[var(--heritage-muted)]"
+                    readOnly
+                    value={shareLink}
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                ) : null}
+                {shareError ? (
+                  <p className="text-sm text-red-700">{shareError}</p>
+                ) : null}
+              </div>
+
+              <ShareCard
+                avatar={shareAvatar}
+                name={shareName || "Khách tham quan"}
+                message={
+                  shareMessage ||
+                  "Mình vừa khám phá hiện vật và không gian 3D này trên Di Sản Việt."
+                }
+                summary={shareSummary}
+                title={selectedMarker.name}
+                place={{
+                  address: selectedMarker.address ?? "",
+                  image: selectedMarker.image ?? "",
+                  latitude: selectedMarker.latitude,
+                  longitude: selectedMarker.longitude,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -389,12 +543,10 @@ function AgentGuidePanel({
   }
 
   function toggleSpeech() {
-    setIsSpeechEnabled((enabled) => {
-      if (enabled) {
-        stopAudio();
-      }
-      return !enabled;
-    });
+    if (isSpeechEnabled) {
+      stopAudio();
+    }
+    setIsSpeechEnabled(!isSpeechEnabled);
   }
 
   return (
@@ -549,11 +701,7 @@ function AgentGuidePanel({
           <div className="space-y-2">
             {suggestions.map((suggestion, index) => {
               const SuggestionIcon =
-                index % 3 === 0
-                  ? Landmark
-                  : index % 3 === 1
-                    ? MapPin
-                    : BookOpen;
+                index % 3 === 0 ? Landmark : index % 3 === 1 ? MapPin : BookOpen;
               return (
                 <button
                   key={suggestion}
@@ -629,4 +777,97 @@ function AgentGuidePanel({
       </div>
     </aside>
   );
+}
+
+function ShareCard({
+  avatar,
+  message,
+  name,
+  place,
+  summary,
+  title,
+}: {
+  avatar: string;
+  message: string;
+  name: string;
+  place: {
+    address: string;
+    image: string;
+    latitude: number;
+    longitude: number;
+  };
+  summary: string;
+  title: string;
+}) {
+  return (
+    <article className="overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[#fff8eb] shadow-[0_18px_50px_rgba(111,86,45,0.14)]">
+      <div className="grid min-h-36 sm:grid-cols-[170px_1fr]">
+        <img className="h-full min-h-36 w-full object-cover" src={place.image} alt="" />
+        <div className="p-5">
+          <p className="font-serif text-2xl font-semibold text-[var(--heritage-brown)]">
+            {title}
+          </p>
+          <p className="mt-3 text-sm leading-6 text-[var(--heritage-muted)]">
+            {place.address}
+          </p>
+          <p className="mt-2 text-xs text-[var(--heritage-muted)]">
+            {place.latitude.toFixed(6)}°B · {place.longitude.toFixed(6)}°Đ
+          </p>
+        </div>
+      </div>
+      <div className="border-t border-[var(--heritage-line)] p-6">
+        <p className="font-serif text-4xl text-[var(--heritage-bronze)]">”</p>
+        <p className="mt-4 font-serif text-2xl leading-9 text-[var(--heritage-brown)]">
+          {message}
+        </p>
+        <div className="mt-8 flex items-center gap-4">
+          <div className="h-14 w-14 overflow-hidden rounded-full bg-[var(--heritage-paper-deep)]">
+            {avatar ? (
+              <img className="h-full w-full object-cover" src={avatar} alt="" />
+            ) : null}
+          </div>
+          <div>
+            <p className="font-semibold text-[var(--heritage-brown)]">{name}</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--heritage-muted)]">
+              {title}
+            </p>
+            <p className="mt-1 text-xs text-[var(--heritage-muted)]">{summary}</p>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function resizeAvatar(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const image = new Image();
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      image.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 96;
+        canvas.height = 96;
+        const context = canvas.getContext("2d");
+        if (!context) return reject(new Error("Không thể đọc ảnh"));
+        const size = Math.min(image.width, image.height);
+        context.drawImage(
+          image,
+          (image.width - size) / 2,
+          (image.height - size) / 2,
+          size,
+          size,
+          0,
+          0,
+          96,
+          96,
+        );
+        resolve(canvas.toDataURL("image/jpeg", 0.72));
+      };
+      image.onerror = reject;
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
 }

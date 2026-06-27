@@ -67,6 +67,21 @@ export type Story = {
   createdAt: string;
 };
 
+export type ShareCard = {
+  id: string;
+  address: string;
+  avatar: string;
+  image: string;
+  latitude: number;
+  longitude: number;
+  marker: string;
+  message: string;
+  name: string;
+  summary: string;
+  title: string;
+  createdAt: string;
+};
+
 export type LandmarkDetail = Landmark & {
   artifacts: Artifact[];
   timeline: TimelineItem[];
@@ -93,6 +108,10 @@ export type TtsResponse = {
   audioUrl: string | null;
   message: string;
   provider: VoiceProvider;
+};
+
+export type AnnotationNarrationResponse = {
+  text: string;
 };
 
 export type SttResponse = {

@@ -1,11 +1,13 @@
 import type {
   AgeGroup,
+  AnnotationNarrationResponse,
   Artifact,
   ArtifactDetail,
   ChatMessage,
   GlbModel,
   Landmark,
   LandmarkDetail,
+  ShareCard,
   Story,
   StoryTargetType,
   SttResponse,
@@ -56,6 +58,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
+  annotationNarration: (payload: { text: string }) =>
+    request<AnnotationNarrationResponse>("/api/annotation/narration", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
   tts: (payload: { text: string; voice?: string; provider?: VoiceProvider }) =>
     request<TtsResponse>("/api/voice/tts", {
       method: "POST",
@@ -83,5 +90,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ storyId })
     }),
-  shareStory: (shareId: string) => request<Story & { shareId: string }>(`/api/share/${shareId}`)
+  shareStory: (shareId: string) => request<Story & { shareId: string }>(`/api/share/${shareId}`),
+  createShareCard: (payload: Omit<ShareCard, "id" | "createdAt">) =>
+    request<{ shareId: string; url: string }>("/api/share/card", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  shareCard: (shareId: string) => request<ShareCard>(`/api/share/card/${shareId}`)
 };

@@ -45,3 +45,18 @@ async function readAgentError(response: Response) {
   const body = await response.text().catch(() => "");
   return body.slice(0, 1000) || response.statusText;
 }
+
+export async function generateAnnotationNarration(text: string): Promise<{ text: string }> {
+  const response = await fetchAgent("/annotation/narration", () => ({
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(20_000),
+    body: JSON.stringify({ text })
+  }));
+
+  if (!response.ok) {
+    throw new Error(`Agent annotation narration request failed with ${response.status}: ${await readAgentError(response)}`);
+  }
+
+  return response.json() as Promise<{ text: string }>;
+}
