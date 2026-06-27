@@ -1,6 +1,15 @@
 import { Box, Maximize2, RotateCcw, Upload } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { AmbientLight, Box3, DirectionalLight, Object3D, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from "three";
+import {
+  AmbientLight,
+  Box3,
+  DirectionalLight,
+  Object3D,
+  PerspectiveCamera,
+  Scene,
+  Vector3,
+  WebGLRenderer,
+} from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -15,7 +24,8 @@ type Annotation = {
 };
 
 const sealModelPath = "Ấn_Sắc_mệnh_chi_bảo-compressed.glb";
-const hoaKhiemModelPath = "Hoa_Khiem_Temple_-_Tomb_of_Emperor_Tu_Duc_compressed.glb";
+const hoaKhiemModelPath =
+  "Hoa_Khiem_Temple_-_Tomb_of_Emperor_Tu_Duc_compressed.glb";
 const modelTitles: Record<string, string> = {
   [sealModelPath]: "Ấn Sắc mệnh chi bảo",
   [hoaKhiemModelPath]: "Lăng vua Tự Đức - khu Hòa Khiêm",
@@ -41,47 +51,47 @@ const annotationSets: Record<string, Annotation[]> = {
       id: 1,
       title: "Mặt ấn",
       body: "Hình vuông, đúc nổi 4 chữ Hán kiểu chữ Triện. Chữ đọc từ trên xuống dưới, từ phải qua trái là Sắc mệnh chi bảo.",
-      position: new Vector3(-0.1228, -0.2089, -0.8014)
+      position: new Vector3(-0.1228, -0.2089, -0.8014),
     },
     {
       id: 2,
       title: "Quai ấn",
       body: "Quai ấn tạo hình rồng cuộn, đầu vươn về phía trước, hai sừng dài, đuôi xòe thành nhiều dải.",
-      position: new Vector3(-0.0073, 0.0109, -0.8839)
+      position: new Vector3(-0.0073, 0.0109, -0.8839),
     },
     {
       id: 3,
       title: "Dòng lạc khoản bên trái",
       body: "Dòng ghi trọng lượng và chất liệu của bảo ấn.",
-      position: new Vector3(-0.168, -0.0919, -1.0241)
+      position: new Vector3(-0.168, -0.0919, -1.0241),
     },
     {
       id: 4,
       title: "Dòng lạc khoản bên phải",
       body: "Dòng ghi niên đại đúc ấn thời Minh Mệnh.",
-      position: new Vector3(0.1496, -0.1596, -0.8073)
-    }
+      position: new Vector3(0.1496, -0.1596, -0.8073),
+    },
   ],
   [hoaKhiemModelPath]: [
     {
       id: 1,
       title: "Xung Khiêm Tạ",
       body: "Công trình nằm bên hồ Lưu Khiêm, là nơi vua Tự Đức ngắm cảnh, hóng mát và làm thơ.",
-      position: new Vector3(12.8239, -21.5856, -34.5832)
+      position: new Vector3(12.8239, -21.5856, -34.5832),
     },
     {
       id: 2,
       title: "Khiêm Cung Môn",
       body: "Cổng dẫn vào sân trước Hòa Khiêm Điện.",
-      position: new Vector3(0, 5, -103)
+      position: new Vector3(0, 5, -103),
     },
     {
       id: 3,
       title: "Hòa Khiêm Điện",
       body: "Công trình trung tâm trong khu tẩm điện, sau dùng làm nơi thờ phụng.",
-      position: new Vector3(7.6373, 27.7562, -140.8787)
-    }
-  ]
+      position: new Vector3(7.6373, 27.7562, -140.8787),
+    },
+  ],
 };
 
 export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
@@ -129,7 +139,11 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     const camera = new PerspectiveCamera(45, 1, 0.01, 1000);
     camera.position.set(3, 2, 4);
 
-    const renderer = new WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+    const renderer = new WebGLRenderer({
+      alpha: true,
+      antialias: true,
+      preserveDrawingBuffer: true,
+    });
     renderer.setPixelRatio(1);
     renderer.outputColorSpace = "srgb";
     renderer.setClearAlpha(0);
@@ -143,7 +157,8 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     controlsRef.current = controls;
 
     function resize() {
-      camera.aspect = container.clientWidth / Math.max(1, container.clientHeight);
+      camera.aspect =
+        container.clientWidth / Math.max(1, container.clientHeight);
       camera.updateProjectionMatrix();
       renderer.setSize(container.clientWidth, container.clientHeight);
     }
@@ -154,7 +169,10 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       renderer.render(scene, camera);
       if (now - lastAnnotationUpdate > 100) {
         lastAnnotationUpdate = now;
-        if (annotationsRef.current.length > 0) setAnnotationPoints(projectAnnotations(annotationsRef.current, camera, container));
+        if (annotationsRef.current.length > 0)
+          setAnnotationPoints(
+            projectAnnotations(annotationsRef.current, camera, container),
+          );
       }
       requestAnimationFrame(animate);
     }
@@ -201,13 +219,14 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
         setStatus("ready");
       },
       (event) => {
-        if (event.total) setProgress(Math.round((event.loaded / event.total) * 100));
+        if (event.total)
+          setProgress(Math.round((event.loaded / event.total) * 100));
       },
       () => {
         if (cancelled) return;
         setStatus("error");
         setError("Không tải được file GLB này.");
-      }
+      },
     );
 
     return () => {
@@ -234,7 +253,12 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
 
   function openAnnotation(annotation: Annotation) {
     setActiveAnnotation(annotation);
-    focusAnnotation(annotation, modelRef.current, cameraRef.current, controlsRef.current);
+    focusAnnotation(
+      annotation,
+      modelRef.current,
+      cameraRef.current,
+      controlsRef.current,
+    );
   }
 
   return (
@@ -242,12 +266,20 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       <div className={embeddedModel ? "hidden" : "mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-end"}>
         <div>
           <h1 className="text-3xl font-semibold">Bảo tàng 3D</h1>
-          <p className="mt-2 text-sm text-ink/65">Đặt file .glb vào frontend/public/models, rồi sửa marker trong ModelViewerPage.tsx.</p>
+          <p className="mt-2 text-sm text-ink/65">
+            Đặt file .glb vào frontend/public/models, rồi sửa marker trong
+            ModelViewerPage.tsx.
+          </p>
         </div>
         <label className="inline-flex cursor-pointer items-center gap-2 rounded bg-[#102832] px-4 py-2 text-sm font-semibold text-white">
           <Upload size={16} />
           Mở GLB từ máy
-          <input className="sr-only" type="file" accept=".glb,model/gltf-binary" onChange={chooseLocalFile} />
+          <input
+            className="sr-only"
+            type="file"
+            accept=".glb,model/gltf-binary"
+            onChange={chooseLocalFile}
+          />
         </label>
       </div>
 
@@ -258,18 +290,28 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
             File GLB
           </div>
           <div className="space-y-2">
-            {models.length === 0 && <p className="text-sm text-ink/60">Chưa có file .glb trong frontend/public/models.</p>}
+            {models.length === 0 && (
+              <p className="text-sm text-ink/60">
+                Chưa có file .glb trong frontend/public/models.
+              </p>
+            )}
             {models.map((model) => (
               <button
                 key={model.path}
                 className={[
                   "w-full rounded border px-3 py-2 text-left text-sm transition",
-                  selectedPath === model.path ? "border-gold bg-gold/20" : "border-ink/10 bg-white hover:border-gold/50"
+                  selectedPath === model.path
+                    ? "border-gold bg-gold/20"
+                    : "border-ink/10 bg-white hover:border-gold/50",
                 ].join(" ")}
                 onClick={() => chooseModel(model)}
               >
-                <span className="block font-semibold">{modelTitles[model.path] ?? model.name}</span>
-                <span className="mt-1 block truncate text-xs text-ink/55">{formatBytes(model.size)}</span>
+                <span className="block font-semibold">
+                  {modelTitles[model.path] ?? model.name}
+                </span>
+                <span className="mt-1 block truncate text-xs text-ink/55">
+                  {formatBytes(model.size)}
+                </span>
               </button>
             ))}
           </div>
@@ -283,7 +325,9 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
               className={[
                 "absolute z-10 grid h-8 w-8 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white bg-black/45 text-sm font-semibold text-white shadow-soft backdrop-blur transition",
                 visible ? "opacity-100" : "pointer-events-none opacity-20",
-                activeAnnotation?.id === annotation.id ? "bg-gold text-ink" : "hover:bg-gold hover:text-ink"
+                activeAnnotation?.id === annotation.id
+                  ? "bg-gold text-ink"
+                  : "hover:bg-gold hover:text-ink",
               ].join(" ")}
               style={{ left, top }}
               onClick={() => openAnnotation(annotation)}
@@ -298,29 +342,60 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
               style={{
                 left: activePoint.left,
                 top: activePoint.top,
-                transform: activePoint.left > 520 ? "translate(calc(-100% - 20px), -16px)" : "translate(20px, -16px)"
+                transform:
+                  activePoint.left > 520
+                    ? "translate(calc(-100% - 20px), -16px)"
+                    : "translate(20px, -16px)",
               }}
             >
               <div className="mb-2 flex items-start justify-between gap-3">
-                <h2 className="text-base font-semibold">{activeAnnotation.title}</h2>
-                <button className="text-sm text-white/65 hover:text-white" onClick={() => setActiveAnnotation(null)} aria-label="Đóng chú thích">
+                <h2 className="text-base font-semibold">
+                  {activeAnnotation.title}
+                </h2>
+                <button
+                  className="text-sm text-white/65 hover:text-white"
+                  onClick={() => setActiveAnnotation(null)}
+                  aria-label="Đóng chú thích"
+                >
                   Đóng
                 </button>
               </div>
-              <p className="text-sm leading-6 text-white/90">{activeAnnotation.body}</p>
+              <p className="text-sm leading-6 text-white/90">
+                {activeAnnotation.body}
+              </p>
             </div>
           )}
           <div className="absolute left-4 top-4 max-w-[calc(100%-2rem)] rounded bg-black/45 px-4 py-3 text-white backdrop-blur">
-            <p className="text-sm font-semibold">{selectedName || "Trình xem GLB"}</p>
+            <p className="text-sm font-semibold">
+              {selectedName || "Trình xem GLB"}
+            </p>
             <p className="mt-1 text-xs text-white/70">
-              {status === "loading" ? `Đang tải ${progress}%` : status === "ready" ? "Kéo để xoay, cuộn để zoom" : error || "Chọn model để bắt đầu"}
+              {status === "loading"
+                ? `Đang tải ${progress}%`
+                : status === "ready"
+                  ? "Kéo để xoay, cuộn để zoom"
+                  : error || "Chọn model để bắt đầu"}
             </p>
           </div>
           <div className="absolute bottom-4 right-4 flex gap-2">
-            <button className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]" onClick={() => frameModel(modelRef.current, cameraRef.current, controlsRef.current)} aria-label="Căn lại model">
+            <button
+              className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]"
+              onClick={() =>
+                frameModel(
+                  modelRef.current,
+                  cameraRef.current,
+                  controlsRef.current,
+                )
+              }
+              aria-label="Căn lại model"
+            >
               <Maximize2 size={18} />
             </button>
-            <button className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]" onClick={() => controlsRef.current?.reset()} aria-label="Reset camera">
+            <button
+              className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]"
+              onClick={() => controlsRef.current?.reset()}
+              aria-label="Reset camera"
+            >
               <RotateCcw size={18} />
             </button>
           </div>
@@ -330,7 +405,11 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   );
 }
 
-function projectAnnotations(annotations: Annotation[], camera: PerspectiveCamera, container: HTMLDivElement) {
+function projectAnnotations(
+  annotations: Annotation[],
+  camera: PerspectiveCamera,
+  container: HTMLDivElement,
+) {
   const width = container.clientWidth;
   const height = container.clientHeight;
 
@@ -340,12 +419,16 @@ function projectAnnotations(annotations: Annotation[], camera: PerspectiveCamera
       annotation,
       left: ((projected.x + 1) / 2) * width,
       top: ((-projected.y + 1) / 2) * height,
-      visible: projected.z > -1 && projected.z < 1
+      visible: projected.z > -1 && projected.z < 1,
     };
   });
 }
 
-function frameModel(model: Object3D | null, camera: PerspectiveCamera | null, controls: OrbitControls | null) {
+function frameModel(
+  model: Object3D | null,
+  camera: PerspectiveCamera | null,
+  controls: OrbitControls | null,
+) {
   if (!model || !camera || !controls) return;
 
   const box = new Box3().setFromObject(model);
@@ -354,7 +437,9 @@ function frameModel(model: Object3D | null, camera: PerspectiveCamera | null, co
   const maxSize = Math.max(size.x, size.y, size.z) || 1;
   const distance = maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360));
 
-  camera.position.copy(center).add(new Vector3(distance, distance * 0.55, distance));
+  camera.position
+    .copy(center)
+    .add(new Vector3(distance, distance * 0.55, distance));
   camera.near = Math.max(0.01, distance / 100);
   camera.far = distance * 100;
   camera.updateProjectionMatrix();
@@ -364,7 +449,12 @@ function frameModel(model: Object3D | null, camera: PerspectiveCamera | null, co
   controls.saveState();
 }
 
-function focusAnnotation(annotation: Annotation, model: Object3D | null, camera: PerspectiveCamera | null, controls: OrbitControls | null) {
+function focusAnnotation(
+  annotation: Annotation,
+  model: Object3D | null,
+  camera: PerspectiveCamera | null,
+  controls: OrbitControls | null,
+) {
   if (!model || !camera || !controls) return;
 
   const box = new Box3().setFromObject(model);
@@ -384,7 +474,12 @@ function focusAnnotation(annotation: Annotation, model: Object3D | null, camera:
   animateCamera(camera, controls, endPosition, target);
 }
 
-function animateCamera(camera: PerspectiveCamera, controls: OrbitControls, endPosition: Vector3, endTarget: Vector3) {
+function animateCamera(
+  camera: PerspectiveCamera,
+  controls: OrbitControls,
+  endPosition: Vector3,
+  endTarget: Vector3,
+) {
   const startPosition = camera.position.clone();
   const startTarget = controls.target.clone();
   const startedAt = performance.now();
@@ -406,7 +501,10 @@ function animateCamera(camera: PerspectiveCamera, controls: OrbitControls, endPo
 
 function disposeModel(model: Object3D) {
   model.traverse((object) => {
-    const mesh = object as Object3D & { geometry?: { dispose: () => void }; material?: { dispose?: () => void } | { dispose?: () => void }[] };
+    const mesh = object as Object3D & {
+      geometry?: { dispose: () => void };
+      material?: { dispose?: () => void } | { dispose?: () => void }[];
+    };
     mesh.geometry?.dispose();
     if (Array.isArray(mesh.material)) {
       mesh.material.forEach((material) => material.dispose?.());
