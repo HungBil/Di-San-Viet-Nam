@@ -4,6 +4,10 @@ export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"TF Times New Normal"', "Georgia", "serif"],
+        serif: ['"UTM Horizon"', "serif"]
+      },
       colors: {
         ink: "#17211b",
         leaf: "#1d5f46",
