@@ -384,7 +384,7 @@ export function ProvinceGeoJsonMap({ activeMarkerId = null, className = "", mark
   );
 
   return (
-    <div className={`relative h-72 min-h-72 overflow-hidden rounded-lg bg-[#d7ecea]/95 text-[var(--heritage-ink)] lg:h-[100%] lg:min-h-0 ${className}`}>
+    <div className={`relative h-72 min-h-72 overflow-hidden rounded-lg bg-[#D8C7A5]/95 text-[var(--heritage-ink)] lg:h-[100%] lg:min-h-0 ${className}`}>
       {mapContent}
 
       <div className="pointer-events-none absolute left-5 top-5">
