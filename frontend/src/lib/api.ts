@@ -3,6 +3,7 @@ import type {
   Artifact,
   ArtifactDetail,
   ChatMessage,
+  GlbModel,
   Landmark,
   LandmarkDetail,
   Story,
@@ -13,6 +14,10 @@ import type {
 } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+
+export function assetUrl(path: string) {
+  return path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -39,6 +44,7 @@ export const api = {
     return request<Artifact[]>(`/api/artifacts${query}`);
   },
   artifact: (id: string) => request<ArtifactDetail>(`/api/artifacts/${id}`),
+  models: () => request<GlbModel[]>("/api/models"),
   createStory: (payload: { targetType: StoryTargetType; targetId: string; ageGroup: AgeGroup }) =>
     request<Story>("/api/stories", {
       method: "POST",
