@@ -142,6 +142,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   const cameraRef = useRef<PerspectiveCamera | null>(null);
   const ambientLightRef = useRef<AmbientLight | null>(null);
   const keyLightRef = useRef<DirectionalLight | null>(null);
+  const sealFillLightsRef = useRef<DirectionalLight[]>([]);
   const modelRef = useRef<Object3D | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const annotationsRef = useRef<Annotation[]>([]);
@@ -195,6 +196,18 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     keyLight.position.set(4, 6, 5);
     scene.add(keyLight);
 
+    const sealFillLights = [
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+    ];
+    sealFillLights[0].position.set(8, 1.5, 0);
+    sealFillLights[1].position.set(-8, 1.5, 0);
+    sealFillLights[2].position.set(0, 1.5, 8);
+    sealFillLights[3].position.set(0, 1.5, -8);
+    sealFillLights.forEach((light) => scene.add(light));
+
     const camera = new PerspectiveCamera(45, 1, 0.01, 1000);
     camera.position.set(3, 2, 4);
 
@@ -217,6 +230,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     controlsRef.current = controls;
     ambientLightRef.current = ambientLight;
     keyLightRef.current = keyLight;
+    sealFillLightsRef.current = sealFillLights;
 
     function resize() {
       camera.aspect =
@@ -271,6 +285,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       selectedPath,
       ambientLightRef.current,
       keyLightRef.current,
+      sealFillLightsRef.current,
     );
     setStatus("loading");
     setProgress(0);
@@ -330,6 +345,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       modelRef.current,
       cameraRef.current,
       controlsRef.current,
+      selectedPath,
     );
   }
 
@@ -600,10 +616,14 @@ function setModelLighting(
   modelPath: string | undefined,
   ambientLight: AmbientLight | null,
   keyLight: DirectionalLight | null,
+  sealFillLights: DirectionalLight[],
 ) {
   const brighter = modelPath ? brighterModelPaths.has(modelPath) : false;
   if (ambientLight) ambientLight.intensity = brighter ? 2.35 : 1.8;
   if (keyLight) keyLight.intensity = brighter ? 3.1 : 2.4;
+  sealFillLights.forEach((light) => {
+    light.intensity = modelPath === sealModelPath ? 1.15 : 0;
+  });
 }
 
 function focusAnnotation(
@@ -611,6 +631,7 @@ function focusAnnotation(
   model: Object3D | null,
   camera: PerspectiveCamera | null,
   controls: OrbitControls | null,
+  modelPath?: string,
 ) {
   if (!model || !camera || !controls) return;
 
@@ -619,7 +640,11 @@ function focusAnnotation(
   const center = box.getCenter(new Vector3());
   const maxSize = Math.max(size.x, size.y, size.z) || 1;
   const target = annotation.position.clone();
-  const direction = target.clone().sub(center);
+  const preset = modelPath ? modelCameraPresets[modelPath] : undefined;
+  const direction =
+    modelPath === hoaKhiemModelPath && preset
+      ? preset.direction.clone()
+      : target.clone().sub(center);
 
   if (direction.lengthSq() < 0.0001) {
     direction.copy(camera.position).sub(target);
