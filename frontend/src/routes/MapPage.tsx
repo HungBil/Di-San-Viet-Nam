@@ -1,9 +1,10 @@
 import { Copy, MapPinned, Share2, X } from "lucide-react";
-import { ChangeEvent, lazy, Suspense, useMemo, useState } from "react";
+import { ChangeEvent, lazy, Suspense, useState } from "react";
 import {
   ProvinceGeoJsonMap,
   type MapMarker,
 } from "../components/map/ProvinceGeoJsonMap";
+import { api } from "../lib/api";
 import type { GlbModel } from "../lib/types";
 
 const EmbeddedModelViewer = lazy(() =>
@@ -61,32 +62,37 @@ export function MapPage() {
   const [shareMessage, setShareMessage] = useState("");
   const [shareAvatar, setShareAvatar] = useState("");
   const [shareLink, setShareLink] = useState("");
+  const [shareError, setShareError] = useState("");
   const selectedModel = selectedMarker
     ? markerModels[selectedMarker.id]
     : undefined;
   const shareSummary = selectedMarker
-    ? `${selectedMarker.name} - ${selectedMarker.address}`
+    ? `${selectedMarker.name} - ${selectedMarker.address ?? ""}`
     : "Chọn một địa điểm trên bản đồ để chia sẻ.";
   const canShare = Boolean(selectedMarker);
-  const shareUrl = useMemo(() => {
-    if (!selectedMarker) return "";
-    const params = new URLSearchParams({
-      name: shareName.trim() || "Khách tham quan",
-      message:
-        shareMessage.trim() ||
-        "Mình vừa khám phá hiện vật và không gian 3D này trên Di Sản Việt.",
-      avatar: shareAvatar,
-      title: selectedMarker.name,
-      summary: shareSummary,
-      marker: selectedMarker.id,
-    });
-    return `${window.location.origin}/share/card?${params.toString()}`;
-  }, [selectedMarker, shareAvatar, shareMessage, shareName, shareSummary]);
-
   function createShareLink() {
-    if (!shareUrl) return;
-    setShareLink(shareUrl);
-    void navigator.clipboard?.writeText(shareUrl).catch(() => undefined);
+    if (!selectedMarker) return;
+    setShareError("");
+    api
+      .createShareCard({
+        address: selectedMarker.address ?? "",
+        avatar: shareAvatar,
+        image: selectedMarker.image ?? "",
+        latitude: selectedMarker.latitude,
+        longitude: selectedMarker.longitude,
+        marker: selectedMarker.id,
+        message:
+          shareMessage.trim() ||
+          "Mình vừa khám phá hiện vật và không gian 3D này trên Di Sản Việt.",
+        name: shareName.trim() || "Khách tham quan",
+        summary: shareSummary,
+        title: selectedMarker.name,
+      })
+      .then((share) => {
+        setShareLink(share.url);
+        void navigator.clipboard?.writeText(share.url).catch(() => undefined);
+      })
+      .catch(() => setShareError("Chưa tạo được link chia sẻ."));
   }
 
   function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
@@ -219,6 +225,9 @@ export function MapPage() {
                     onFocus={(event) => event.currentTarget.select()}
                   />
                 ) : null}
+                {shareError ? (
+                  <p className="text-sm text-red-700">{shareError}</p>
+                ) : null}
               </div>
 
               <ShareCard
@@ -230,6 +239,12 @@ export function MapPage() {
                 }
                 summary={shareSummary}
                 title={selectedMarker.name}
+                place={{
+                  address: selectedMarker.address ?? "",
+                  image: selectedMarker.image ?? "",
+                  latitude: selectedMarker.latitude,
+                  longitude: selectedMarker.longitude,
+                }}
               />
             </div>
           </div>
@@ -243,17 +258,39 @@ function ShareCard({
   avatar,
   message,
   name,
+  place,
   summary,
   title,
 }: {
   avatar: string;
   message: string;
   name: string;
+  place: {
+    address: string;
+    image: string;
+    latitude: number;
+    longitude: number;
+  };
   summary: string;
   title: string;
 }) {
   return (
-    <article className="rounded-lg border border-[var(--heritage-line)] bg-[#fff8eb] p-6 shadow-[0_18px_50px_rgba(111,86,45,0.14)]">
+    <article className="overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[#fff8eb] shadow-[0_18px_50px_rgba(111,86,45,0.14)]">
+      <div className="grid min-h-36 sm:grid-cols-[170px_1fr]">
+        <img className="h-full min-h-36 w-full object-cover" src={place.image} alt="" />
+        <div className="p-5">
+          <p className="font-serif text-2xl font-semibold text-[var(--heritage-brown)]">
+            {title}
+          </p>
+          <p className="mt-3 text-sm leading-6 text-[var(--heritage-muted)]">
+            {place.address}
+          </p>
+          <p className="mt-2 text-xs text-[var(--heritage-muted)]">
+            {place.latitude.toFixed(6)}°B · {place.longitude.toFixed(6)}°Đ
+          </p>
+        </div>
+      </div>
+      <div className="border-t border-[var(--heritage-line)] p-6">
       <p className="font-serif text-4xl text-[var(--heritage-bronze)]">”</p>
       <p className="mt-4 font-serif text-2xl leading-9 text-[var(--heritage-brown)]">
         {message}
@@ -271,6 +308,7 @@ function ShareCard({
           </p>
           <p className="mt-1 text-xs text-[var(--heritage-muted)]">{summary}</p>
         </div>
+      </div>
       </div>
     </article>
   );

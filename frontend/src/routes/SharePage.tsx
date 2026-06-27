@@ -3,20 +3,65 @@ import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ErrorState, LoadingState } from "../components/common/Status";
 import { api } from "../lib/api";
-import type { Story } from "../lib/types";
+import type { ShareCard, Story } from "../lib/types";
 
 export function SharePage() {
   const { shareId } = useParams();
   const [searchParams] = useSearchParams();
-  const card = getCard(searchParams);
 
-  if (shareId === "card" && card) {
-    return (
-      <section className="heritage-surface -mt-[88px] grid min-h-screen place-items-center px-4 py-28">
-        <article className="w-full max-w-2xl rounded-lg border border-[var(--heritage-line)] bg-[#fff8eb] p-7 shadow-[0_22px_70px_rgba(111,86,45,0.18)]">
-          <p className="font-serif text-5xl text-[var(--heritage-bronze)]">
-            ”
-          </p>
+  if (shareId === "card") {
+    return <CardShare shareId={searchParams.get("id") ?? ""} />;
+  }
+
+  return <StoryShare shareId={shareId} />;
+}
+
+function CardShare({ shareId }: { shareId: string }) {
+  const [card, setCard] = useState<ShareCard | null>(null);
+  const [isLoading, setIsLoading] = useState(Boolean(shareId));
+  const [error, setError] = useState<string | null>(
+    shareId ? null : "Thiếu mã share card",
+  );
+
+  useEffect(() => {
+    if (!shareId) return;
+    api
+      .shareCard(shareId)
+      .then(setCard)
+      .catch((currentError) =>
+        setError(
+          currentError instanceof Error
+            ? currentError.message
+            : "Không thể tải share card",
+        ),
+      )
+      .finally(() => setIsLoading(false));
+  }, [shareId]);
+
+  if (isLoading) return <LoadingState label="Đang tải share card..." />;
+  if (error || !card)
+    return <ErrorState message={error ?? "Không tìm thấy share card"} />;
+
+  return (
+    <section className="heritage-surface -mt-[88px] grid min-h-screen place-items-center px-4 py-28">
+      <article className="w-full max-w-3xl overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[#fff8eb] shadow-[0_22px_70px_rgba(111,86,45,0.18)]">
+        <div className="grid min-h-44 sm:grid-cols-[220px_1fr]">
+          <img className="h-full min-h-44 w-full object-cover" src={card.image} alt="" />
+          <div className="p-6">
+            <p className="font-serif text-2xl font-semibold text-[var(--heritage-brown)]">
+              {card.title}
+            </p>
+            <p className="mt-3 text-sm leading-6 text-[var(--heritage-muted)]">
+              {card.address}
+            </p>
+            <p className="mt-2 text-xs text-[var(--heritage-muted)]">
+              <MapPinned className="mr-1 inline" size={13} />
+              {card.latitude.toFixed(6)}°B · {card.longitude.toFixed(6)}°Đ
+            </p>
+          </div>
+        </div>
+        <div className="border-t border-[var(--heritage-line)] p-7">
+          <p className="font-serif text-5xl text-[var(--heritage-bronze)]">”</p>
           <p className="mt-4 font-serif text-2xl leading-10 text-[var(--heritage-brown)]">
             {card.message}
           </p>
@@ -34,7 +79,6 @@ export function SharePage() {
                 {card.title}
               </p>
               <p className="mt-1 text-xs text-[var(--heritage-muted)]">
-                <MapPinned className="mr-1 inline" size={13} />
                 {card.summary}
               </p>
             </div>
@@ -45,12 +89,10 @@ export function SharePage() {
           >
             Mở địa điểm 3D
           </Link>
-        </article>
-      </section>
-    );
-  }
-
-  return <StoryShare shareId={shareId} />;
+        </div>
+      </article>
+    </section>
+  );
 }
 
 function StoryShare({ shareId }: { shareId?: string }) {
@@ -122,17 +164,3 @@ function StoryShare({ shareId }: { shareId?: string }) {
   );
 }
 
-function getCard(params: URLSearchParams) {
-  const title = params.get("title");
-  const marker = params.get("marker");
-  if (!title || !marker) return null;
-
-  return {
-    avatar: params.get("avatar") ?? "",
-    marker,
-    message: params.get("message") ?? "",
-    name: params.get("name") ?? "Khách tham quan",
-    summary: params.get("summary") ?? "",
-    title,
-  };
-}

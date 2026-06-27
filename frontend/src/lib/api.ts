@@ -6,6 +6,7 @@ import type {
   GlbModel,
   Landmark,
   LandmarkDetail,
+  ShareCard,
   Story,
   StoryTargetType,
   SttResponse,
@@ -83,5 +84,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ storyId })
     }),
-  shareStory: (shareId: string) => request<Story & { shareId: string }>(`/api/share/${shareId}`)
+  shareStory: (shareId: string) => request<Story & { shareId: string }>(`/api/share/${shareId}`),
+  createShareCard: (payload: Omit<ShareCard, "id" | "createdAt">) =>
+    request<{ shareId: string; url: string }>("/api/share/card", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  shareCard: (shareId: string) => request<ShareCard>(`/api/share/card/${shareId}`)
 };
