@@ -26,8 +26,10 @@ export function useAnnotationVoice(enabled: boolean) {
       createUtterance: (text) =>
         new SpeechSynthesisUtterance(text) as unknown as AnnotationVoiceUtterance,
       narrate: async (text) => {
-        const result = await api.annotationNarration({ text });
-        return result.text;
+        return api
+          .annotationNarration({ text })
+          .then((result) => result.text)
+          .catch(() => text);
       },
       onStateChange: setVoiceState,
       speechSynthesis:

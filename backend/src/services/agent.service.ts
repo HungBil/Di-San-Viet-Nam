@@ -55,7 +55,7 @@ export async function generateAnnotationNarration(text: string): Promise<{ text:
   }));
 
   if (!response.ok) {
-    throw new Error(`Agent annotation narration request failed with ${response.status}: ${await readAgentError(response)}`);
+    return { text };
   }
 
   return response.json() as Promise<{ text: string }>;

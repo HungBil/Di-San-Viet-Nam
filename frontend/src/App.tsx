@@ -17,7 +17,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/map" element={<MapPage />} />
-          <Route path="/3d" element={<ModelViewerPage />} />
+          <Route path="/3d" element={<ModelViewerPage autoNarrateAnnotations />} />
           <Route path="/landmarks/:landmarkId" element={<LandmarkDetailPage />} />
           <Route path="/artifacts/:artifactId" element={<ArtifactDetailPage />} />
           <Route path="/stories/:storyId" element={<StoryPage />} />
