@@ -112,8 +112,9 @@ Backend đọc dữ liệu địa danh, hiện vật, timeline, graph và danh s
 ├── backend/           # Express API, content/story/share/model routes
 ├── agent/             # FastAPI AI agent, prompt, fallback, voice/chat/story
 ├── infra/dev/         # Docker Compose cho môi trường dev
+├── docs/              # Tài liệu thiết kế, yêu cầu, kiến trúc, hạ tầng, sản phẩm
 ├── README.md          # Hướng dẫn repo và demo
-└── TAILIEU.md         # Phân tích Track 3: tác động đến Việt Nam
+└── .env.example       # Mẫu biến môi trường
 ```
 
 ## Dữ Liệu Và Model 3D
@@ -179,4 +180,9 @@ Câu chuyện AI trong demo chỉ dựa trên context mẫu, chưa phải tư li
 
 ## Tài Liệu Liên Quan
 
-- `TAILIEU.md`: phân tích sâu về Track 3 và tác động đến Việt Nam.
+- `docs/PRODUCT_OVERVIEW.md`: mô tả sản phẩm, người dùng, phạm vi MVP và roadmap.
+- `docs/REQUIREMENTS.md`: yêu cầu chức năng, phi chức năng và acceptance criteria.
+- `docs/SRS.md`: đặc tả yêu cầu phần mềm ở mức hệ thống.
+- `docs/SYSTEM_ARCHITECTURE.md`: kiến trúc hệ thống, luồng dữ liệu và trust boundaries.
+- `docs/INFRASTRUCTURE.md`: hạ tầng dev, Docker Compose, env và vận hành.
+- `docs/TAILIEU.md`: phân tích sâu về Track 3 và tác động đến Việt Nam.
