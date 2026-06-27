@@ -74,6 +74,21 @@ export type ShareRecord = {
   createdAt: string;
 };
 
+export type ShareCard = {
+  id: string;
+  address: string;
+  avatar: string;
+  image: string;
+  latitude: number;
+  longitude: number;
+  marker: string;
+  message: string;
+  name: string;
+  summary: string;
+  title: string;
+  createdAt: string;
+};
+
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;

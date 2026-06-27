@@ -1,16 +1,16 @@
 import { Router } from "express";
-import { env } from "../config/env.js";
+import { fetchAgent } from "../services/agent-http.service.js";
 
 export const voiceRouter = Router();
 
 voiceRouter.post("/tts", async (req, res, next) => {
   try {
-    const response = await fetch(`${env.agentBaseUrl}/voice/tts`, {
+    const response = await fetchAgent("/voice/tts", () => ({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: AbortSignal.timeout(30_000),
       body: JSON.stringify(req.body)
-    });
+    }));
 
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -32,13 +32,13 @@ voiceRouter.post("/stt", async (req, res, next) => {
       return;
     }
 
-    const response = await fetch(`${env.agentBaseUrl}/voice/stt`, {
+    const response = await fetchAgent("/voice/stt", () => ({
       method: "POST",
       headers: { "Content-Type": contentType },
       signal: AbortSignal.timeout(60_000),
       body: req as unknown as BodyInit,
       duplex: "half"
-    } as RequestInit & { duplex: "half" });
+    } as RequestInit & { duplex: "half" }));
 
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {

@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 from app.config import settings
 
 
-async def complete_text(system_prompt: str, user_prompt: str) -> str | None:
+async def complete_text(system_prompt: str, user_prompt: str, temperature: float = 0.2) -> str | None:
     if not settings.openai_api_key:
         return None
 
@@ -18,7 +18,7 @@ async def complete_text(system_prompt: str, user_prompt: str) -> str | None:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            temperature=0.2,
+            temperature=temperature,
         )
         return response.choices[0].message.content
     except Exception:

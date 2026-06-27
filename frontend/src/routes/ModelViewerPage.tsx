@@ -1,4 +1,4 @@
-import { Box, Maximize2, RefreshCw, RotateCcw, ScanLine, Upload } from "lucide-react";
+import { Box, Maximize2, RefreshCw, RotateCcw, ScanLine, Square, Upload, Volume2 } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AmbientLight,
@@ -23,6 +23,7 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { useAnnotationVoice } from "../components/voice/useAnnotationVoice";
 import type { GlbModel } from "../lib/types";
 
 type LoadStatus = "idle" | "loading" | "ready" | "error";
@@ -36,11 +37,12 @@ type Annotation = {
 const sealModelPath = "Ấn_Sắc_mệnh_chi_bảo-compressed.glb";
 const hoaKhiemModelPath =
   "Hoa_Khiem_Temple_-_Tomb_of_Emperor_Tu_Duc_compressed.glb";
+const tankModelPath = "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb";
 const modelTitles: Record<string, string> = {
   [sealModelPath]: "Ấn Sắc mệnh chi bảo",
   [hoaKhiemModelPath]: "Lăng vua Tự Đức - khu Hòa Khiêm",
   "one-pillar-pagoda-chua-mot-cot-compressed.glb": "Chùa Một Cột",
-  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": "Xe tăng 843",
+  [tankModelPath]: "Xe tăng 843",
 };
 
 const localModels: GlbModel[] = [
@@ -64,8 +66,8 @@ const localModels: GlbModel[] = [
   },
   {
     name: "Xe tăng 843",
-    path: "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb",
-    url: "/models/tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb",
+    path: tankModelPath,
+    url: `/models/${tankModelPath}`,
     size: 6058444,
   },
 ];
@@ -80,19 +82,20 @@ const modelCameraPresets: Record<
     direction: new Vector3(0, 0.3, 1),
     zoom: 0.68,
   },
-  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": {
-    direction: new Vector3(0, -1, 0.24),
-    zoom: 0.68,
-    targetOffset: new Vector3(0.16, 0, 0.04),
+  [tankModelPath]: {
+    direction: new Vector3(0, -1, 0.18),
+    zoom: 0.86,
+    targetOffset: new Vector3(0.08, 0, 0.02),
   },
 };
 
 const brighterModelPaths = new Set([
   "one-pillar-pagoda-chua-mot-cot-compressed.glb",
-  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb",
+  tankModelPath,
 ]);
 
 type ModelViewerPageProps = {
+  autoNarrateAnnotations?: boolean;
   embeddedModel?: GlbModel;
 };
 
@@ -152,7 +155,7 @@ const annotationSets: Record<string, Annotation[]> = {
   ],
 };
 
-export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
+export function ModelViewerPage({ autoNarrateAnnotations = false, embeddedModel }: ModelViewerPageProps = {}) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<Scene | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
@@ -160,6 +163,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   const ambientLightRef = useRef<AmbientLight | null>(null);
   const keyLightRef = useRef<DirectionalLight | null>(null);
   const sealFillLightsRef = useRef<DirectionalLight[]>([]);
+  const tankFillLightsRef = useRef<DirectionalLight[]>([]);
   const modelRef = useRef<Object3D | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const annotationsRef = useRef<Annotation[]>([]);
@@ -194,6 +198,8 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   const activePoint = annotations.find(
     (point) => point.annotation.id === activeAnnotation?.id,
   );
+  const { speakAnnotation, stopAnnotationVoice, voiceState } =
+    useAnnotationVoice(autoNarrateAnnotations);
 
   useEffect(() => {
     annotationsRef.current = annotationSets[selectedPath ?? ""] ?? [];
@@ -229,6 +235,18 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     sealFillLights[3].position.set(0, 1.5, -8);
     sealFillLights.forEach((light) => scene.add(light));
 
+    const tankFillLights = [
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+      new DirectionalLight("#ffffff", 0),
+    ];
+    tankFillLights[0].position.set(10, 3, 0);
+    tankFillLights[1].position.set(-10, 3, 0);
+    tankFillLights[2].position.set(0, 3, 10);
+    tankFillLights[3].position.set(0, 3, -10);
+    tankFillLights.forEach((light) => scene.add(light));
+
     const camera = new PerspectiveCamera(45, 1, 0.01, 1000);
     camera.position.set(3, 2, 4);
 
@@ -254,6 +272,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     ambientLightRef.current = ambientLight;
     keyLightRef.current = keyLight;
     sealFillLightsRef.current = sealFillLights;
+    tankFillLightsRef.current = tankFillLights;
 
     const reticle = new Group();
     const scanGrid = new GridHelper(1.2, 12, "#d8ad52", "#d8ad52");
@@ -303,22 +322,22 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     let ignoreSelectUntil = 0;
     let arDrag:
       | {
-          pointerId: number;
-          mode: "move" | "rotate";
-          startX: number;
-          startY: number;
-          lastX: number;
-          moved: boolean;
-          moveOffset: Vector3;
-          planeY: number;
-        }
+        pointerId: number;
+        mode: "move" | "rotate";
+        startX: number;
+        startY: number;
+        lastX: number;
+        moved: boolean;
+        moveOffset: Vector3;
+        planeY: number;
+      }
       | null = null;
     let arPinch:
       | {
-          startDistance: number;
-          startScale: Vector3;
-          planeY: number;
-        }
+        startDistance: number;
+        startScale: Vector3;
+        planeY: number;
+      }
       | null = null;
 
     function getPointerDistance() {
@@ -735,6 +754,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   useEffect(() => {
     if (!selectedUrl || !sceneRef.current) return;
 
+    if (autoNarrateAnnotations) stopAnnotationVoice();
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath("/draco/");
     const loader = new GLTFLoader();
@@ -752,6 +772,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       ambientLightRef.current,
       keyLightRef.current,
       sealFillLightsRef.current,
+      tankFillLightsRef.current,
     );
     setStatus("loading");
     setProgress(0);
@@ -782,7 +803,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       cancelled = true;
       dracoLoader.dispose();
     };
-  }, [selectedUrl]);
+  }, [autoNarrateAnnotations, selectedPath, selectedUrl, stopAnnotationVoice]);
 
   function chooseModel(model: GlbModel) {
     objectUrlRef.current && URL.revokeObjectURL(objectUrlRef.current);
@@ -809,6 +830,16 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       controlsRef.current,
       selectedPath,
     );
+    if (autoNarrateAnnotations) {
+      void speakAnnotation(
+        `Di tích: ${selectedName}. Điểm thuyết minh: ${annotation.title}. ${annotation.body}`,
+      );
+    }
+  }
+
+  function closeAnnotation() {
+    setActiveAnnotation(null);
+    if (autoNarrateAnnotations) stopAnnotationVoice();
   }
 
   function toggleAr() {
@@ -957,7 +988,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
                 </h2>
                 <button
                   className="text-sm text-white/65 hover:text-white"
-                  onClick={() => setActiveAnnotation(null)}
+                  onClick={closeAnnotation}
                   aria-label="Đóng chú thích"
                 >
                   Đóng
@@ -1036,44 +1067,65 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
                 <ScanLine size={18} />
                 Mở AR
               </button>
-            <button
-              className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]"
-              onClick={() => {
-                if (controlsRef.current) controlsRef.current.autoRotate = false;
-                setIsAutoRotating(false);
-                frameModel(
-                  modelRef.current,
-                  cameraRef.current,
-                  controlsRef.current,
-                  selectedPath,
-                );
-              }}
-              aria-label="Căn lại model"
-            >
-              <Maximize2 size={18} />
-            </button>
-            <button
-              className={[
-                "grid h-10 w-10 place-items-center rounded text-[#102832] transition",
-                isAutoRotating ? "bg-gold" : "bg-white hover:bg-gold/70",
-              ].join(" ")}
-              onClick={toggleAutoRotate}
-              aria-pressed={isAutoRotating}
-              aria-label={
-                isAutoRotating ? "Tắt tự xoay model" : "Bật tự xoay model"
-              }
-            >
-              <RefreshCw size={18} />
-            </button>
-            <button
-              className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]"
-              onClick={resetCamera}
-              aria-label="Reset camera"
-            >
-              <RotateCcw size={18} />
-            </button>
+              <button
+                className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]"
+                onClick={() => {
+                  if (controlsRef.current) controlsRef.current.autoRotate = false;
+                  setIsAutoRotating(false);
+                  frameModel(
+                    modelRef.current,
+                    cameraRef.current,
+                    controlsRef.current,
+                    selectedPath,
+                  );
+                }}
+                aria-label="Căn lại model"
+              >
+                <Maximize2 size={18} />
+              </button>
+              <button
+                className={[
+                  "grid h-10 w-10 place-items-center rounded text-[#102832] transition",
+                  isAutoRotating ? "bg-gold" : "bg-white hover:bg-gold/70",
+                ].join(" ")}
+                onClick={toggleAutoRotate}
+                aria-pressed={isAutoRotating}
+                aria-label={
+                  isAutoRotating ? "Tắt tự xoay model" : "Bật tự xoay model"
+                }
+              >
+                <RefreshCw size={18} />
+              </button>
+              <button
+                className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]"
+                onClick={resetCamera}
+                aria-label="Reset camera"
+              >
+                <RotateCcw size={18} />
+              </button>
             </div>
           )}
+          {autoNarrateAnnotations && voiceState.phase !== "idle" ? (
+            <div className="absolute bottom-4 left-4 flex max-w-[calc(100%-8.5rem)] items-center gap-3 rounded bg-black/65 px-3 py-2 text-white shadow-soft backdrop-blur">
+              <Volume2 size={17} className="shrink-0 text-gold" />
+              <p className="min-w-0 truncate text-xs">
+                {voiceState.phase === "loading"
+                  ? "Đang tạo giọng..."
+                  : voiceState.phase === "speaking"
+                    ? "Đang đọc chú thích"
+                    : voiceState.message ?? "Không phát được giọng đọc"}
+              </p>
+              <button
+                type="button"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded bg-white text-[#102832] transition hover:bg-gold"
+                onClick={stopAnnotationVoice}
+                aria-label="Dừng giọng đọc"
+                title="Dừng"
+              >
+                <Square size={13} fill="currentColor" />
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </section>
@@ -1155,12 +1207,16 @@ function setModelLighting(
   ambientLight: AmbientLight | null,
   keyLight: DirectionalLight | null,
   sealFillLights: DirectionalLight[],
+  tankFillLights: DirectionalLight[],
 ) {
   const brighter = modelPath ? brighterModelPaths.has(modelPath) : false;
   if (ambientLight) ambientLight.intensity = brighter ? 2.35 : 1.8;
   if (keyLight) keyLight.intensity = brighter ? 3.1 : 2.4;
   sealFillLights.forEach((light) => {
     light.intensity = modelPath === sealModelPath ? 1.15 : 0;
+  });
+  tankFillLights.forEach((light) => {
+    light.intensity = modelPath === tankModelPath ? 1.35 : 0;
   });
 }
 

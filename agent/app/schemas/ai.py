@@ -66,6 +66,14 @@ class ChatResponse(BaseModel):
     suggestions: list[str] = Field(default_factory=list)
 
 
+class AnnotationNarrationRequest(BaseModel):
+    text: str
+
+
+class AnnotationNarrationResponse(BaseModel):
+    text: str
+
+
 class TtsRequest(BaseModel):
     text: str
     voice: str | None = None

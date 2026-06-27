@@ -1,7 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.schemas.ai import ChatRequest, ChatResponse
-from app.services.fallback_service import fallback_chat
 from app.services.llm_service import complete_json
 from app.services.prompt_service import build_chat_prompt
 
@@ -12,10 +11,9 @@ router = APIRouter()
 async def chat(payload: ChatRequest) -> ChatResponse:
     prompt = build_chat_prompt(payload.context, payload.message)
     result = await complete_json(prompt)
-    if result:
-        try:
-            return ChatResponse(**result)
-        except Exception:
-            pass
-    return fallback_chat(payload.context, payload.message)
-
+    if not result:
+        raise HTTPException(status_code=502, detail="LLM did not return a valid chat response.")
+    try:
+        return ChatResponse(**result)
+    except Exception as error:
+        raise HTTPException(status_code=502, detail=f"LLM chat response schema is invalid: {error}") from error

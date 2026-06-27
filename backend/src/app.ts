@@ -1,5 +1,6 @@
 import cors from "cors";
 import express, { type ErrorRequestHandler } from "express";
+import { annotationRouter } from "./routes/annotation.routes.js";
 import { chatRouter } from "./routes/chat.routes.js";
 import { contentRouter } from "./routes/content.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
@@ -18,6 +19,7 @@ app.use("/api", contentRouter);
 app.use("/api", modelRouter);
 app.use("/api/stories", storyRouter);
 app.use("/api/chat", chatRouter);
+app.use("/api/annotation", annotationRouter);
 app.use("/api/share", shareRouter);
 app.use("/api/voice", voiceRouter);
 
