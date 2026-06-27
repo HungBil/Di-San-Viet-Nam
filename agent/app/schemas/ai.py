@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 AgeGroup = Literal["kids", "teens", "adults"]
 StoryTargetType = Literal["landmark", "artifact"]
+VoiceProvider = Literal["elevenlabs", "openai", "mock"]
 
 
 class TimelineItem(BaseModel):
@@ -68,13 +69,15 @@ class ChatResponse(BaseModel):
 class TtsRequest(BaseModel):
     text: str
     voice: str | None = None
+    provider: VoiceProvider | None = None
 
 
 class TtsResponse(BaseModel):
     audioUrl: str | None = None
     message: str
+    provider: VoiceProvider = "mock"
 
 
 class SttResponse(BaseModel):
     text: str
-
+    provider: VoiceProvider = "mock"

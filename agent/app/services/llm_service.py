@@ -6,6 +6,25 @@ from openai import AsyncOpenAI
 from app.config import settings
 
 
+async def complete_text(system_prompt: str, user_prompt: str) -> str | None:
+    if not settings.openai_api_key:
+        return None
+
+    client = AsyncOpenAI(api_key=settings.openai_api_key, timeout=20.0)
+    try:
+        response = await client.chat.completions.create(
+            model=settings.llm_model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.2,
+        )
+        return response.choices[0].message.content
+    except Exception:
+        return None
+
+
 async def complete_json(prompt: str) -> dict[str, Any] | None:
     if not settings.openai_api_key:
         return None
