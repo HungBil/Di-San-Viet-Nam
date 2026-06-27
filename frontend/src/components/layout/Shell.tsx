@@ -1,4 +1,4 @@
-import { Globe2, Landmark, Search, UserRound } from "lucide-react";
+import { Globe2, Search, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import GlassSurface from "../common/GlassSurface";
@@ -29,7 +29,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="flex w-full items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-7">
             <Link to="/" className="flex min-w-0 items-center gap-3">
               <span className="grid h-10 w-10 flex-none place-items-center rounded-full border border-[#f6d99b]/35 bg-white/10 text-[#f6d99b] shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]">
-                <Landmark size={24} strokeWidth={1.8} />
+                <img className="h-8 w-8 rounded-full object-cover" src="/favicon.png" alt="" aria-hidden="true" />
               </span>
               <span className="min-w-0">
                 <span className="block truncate font-serif text-xl font-semibold leading-5 text-[#f6d99b]">Di Sản Việt</span>
