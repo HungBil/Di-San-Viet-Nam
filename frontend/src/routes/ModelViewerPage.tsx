@@ -114,6 +114,7 @@ export function ModelViewerPage() {
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
+    const mountElement = mount;
 
     const scene = new Scene();
     scene.add(new AmbientLight("#ffffff", 1.8));
@@ -129,7 +130,7 @@ export function ModelViewerPage() {
     renderer.setPixelRatio(1);
     renderer.outputColorSpace = "srgb";
     renderer.setClearAlpha(0);
-    mount.appendChild(renderer.domElement);
+    mountElement.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -139,9 +140,9 @@ export function ModelViewerPage() {
     controlsRef.current = controls;
 
     function resize() {
-      camera.aspect = mount.clientWidth / Math.max(1, mount.clientHeight);
+      camera.aspect = mountElement.clientWidth / Math.max(1, mountElement.clientHeight);
       camera.updateProjectionMatrix();
-      renderer.setSize(mount.clientWidth, mount.clientHeight);
+      renderer.setSize(mountElement.clientWidth, mountElement.clientHeight);
     }
 
     let lastAnnotationUpdate = 0;
@@ -150,7 +151,7 @@ export function ModelViewerPage() {
       renderer.render(scene, camera);
       if (now - lastAnnotationUpdate > 100) {
         lastAnnotationUpdate = now;
-        if (annotationsRef.current.length > 0) setAnnotationPoints(projectAnnotations(annotationsRef.current, camera, mount));
+        if (annotationsRef.current.length > 0) setAnnotationPoints(projectAnnotations(annotationsRef.current, camera, mountElement));
       }
       requestAnimationFrame(animate);
     }

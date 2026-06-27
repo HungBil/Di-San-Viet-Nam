@@ -31,7 +31,18 @@ type DragState = {
 };
 
 type ProvinceGeoJsonMapProps = {
+  activeMarkerId?: string | null;
   className?: string;
+  markers?: MapMarker[];
+  onMarkerClick?: (marker: MapMarker) => void;
+};
+
+export type MapMarker = {
+  address?: string;
+  id: string;
+  latitude: number;
+  longitude: number;
+  name: string;
 };
 
 const viewBoxWidth = 300;
@@ -89,7 +100,7 @@ const mapLegend = [
   { label: "Di sản văn hóa", color: "#6f5830" }
 ];
 
-export function ProvinceGeoJsonMap({ className = "" }: ProvinceGeoJsonMapProps) {
+export function ProvinceGeoJsonMap({ activeMarkerId = null, className = "", markers = [], onMarkerClick }: ProvinceGeoJsonMapProps) {
   const [loadedProvinces, setLoadedProvinces] = useState<LoadedProvince[]>([]);
   const [activeCode, setActiveCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -145,8 +156,8 @@ export function ProvinceGeoJsonMap({ className = "" }: ProvinceGeoJsonMapProps) 
     return () => controller.abort();
   }, []);
 
-  const paths = useMemo(() => {
-    if (loadedProvinces.length === 0) return [];
+  const renderedMap = useMemo(() => {
+    if (loadedProvinces.length === 0) return { paths: [], projectedMarkers: [] };
 
     const collection = {
       type: "FeatureCollection",
@@ -162,11 +173,19 @@ export function ProvinceGeoJsonMap({ className = "" }: ProvinceGeoJsonMapProps) 
     );
     const path = geoPath(projection);
 
-    return loadedProvinces.map((province) => ({
-      ...province,
-      path: path(province.feature as GeoPermissibleObjects) ?? ""
-    }));
-  }, [loadedProvinces]);
+    return {
+      paths: loadedProvinces.map((province) => ({
+        ...province,
+        path: path(province.feature as GeoPermissibleObjects) ?? ""
+      })),
+      projectedMarkers: markers.flatMap((marker) => {
+        const point = projection([marker.longitude, marker.latitude]);
+        return point ? [{ ...marker, x: point[0], y: point[1] }] : [];
+      })
+    };
+  }, [loadedProvinces, markers]);
+
+  const { paths, projectedMarkers } = renderedMap;
 
   const activeProvince = paths.find((province) => province.code === activeCode);
 
@@ -270,6 +289,35 @@ export function ProvinceGeoJsonMap({ className = "" }: ProvinceGeoJsonMapProps) 
                 >
                   <title>{province.name}</title>
                 </path>
+              );
+            })}
+            {projectedMarkers.map((marker) => {
+              const isActive = marker.id === activeMarkerId;
+
+              return (
+                <g
+                  key={marker.id}
+                  className="cursor-pointer outline-none"
+                  transform={`translate(${marker.x} ${marker.y})`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${marker.name}. ${marker.address ?? ""}`}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onMarkerClick?.(marker);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onMarkerClick?.(marker);
+                    }
+                  }}
+                >
+                  <circle r={isActive ? 8 : 7} fill="rgba(155,122,58,0.22)" stroke="none" className="animate-pulse" />
+                  <circle r={isActive ? 4.2 : 3.6} fill={isActive ? "#6f5830" : "#9b7a3a"} stroke="#fffaf0" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                  <title>{marker.name}</title>
+                </g>
               );
             })}
           </g>

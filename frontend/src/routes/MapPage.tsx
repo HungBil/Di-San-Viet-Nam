@@ -1,56 +1,75 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { VietnamMap } from "../components/map/VietnamMap";
-import { ErrorState, LoadingState } from "../components/common/Status";
-import { api } from "../lib/api";
-import type { Landmark } from "../lib/types";
+import { MapPinned } from "lucide-react";
+import { useState } from "react";
+import { HeritageModelViewer } from "../components/map/HeritageModelViewer";
+import { ProvinceGeoJsonMap, type MapMarker } from "../components/map/ProvinceGeoJsonMap";
+
+const thangLongCitadel: MapMarker = {
+  id: "thang-long-citadel",
+  name: "Hoàng thành Thăng Long",
+  latitude: 21.039444,
+  longitude: 105.837222,
+  address: "19C Hoàng Diệu, phường Điện Biên, quận Ba Đình, Hà Nội"
+};
+
+const sealModelUrl = "/models/%E1%BA%A4n_S%E1%BA%AFc_m%E1%BB%87nh_chi_b%E1%BA%A3o-compressed.glb";
 
 export function MapPage() {
-  const [landmarks, setLandmarks] = useState<Landmark[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    api
-      .landmarks()
-      .then(setLandmarks)
-      .catch((currentError) => setError(currentError instanceof Error ? currentError.message : "Không thể tải map"))
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  if (isLoading) return <LoadingState label="Đang tải Vietnam Map..." />;
-  if (error) return <ErrorState message={error} />;
+  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div>
-          <h1 className="text-3xl font-semibold">Khám phá Việt Nam</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-ink/65">
-            Click vào địa danh để mở danh lam thắng cảnh, tạo câu chuyện AI và chia sẻ ngay.
+    <div className="heritage-surface -mt-[88px] min-h-screen pt-[88px]">
+      <section className="mx-auto max-w-7xl px-4 pb-12 pt-8 sm:px-6 sm:pt-10 lg:px-8">
+        <div className="mb-6 flex flex-col justify-between gap-4 border-b border-[var(--heritage-line)] pb-5 sm:flex-row sm:items-end">
+          <div>
+            <p className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-[var(--heritage-muted)]">
+              <MapPinned size={15} strokeWidth={1.7} />
+              Hành trình di sản
+            </p>
+            <h1 className="mt-2 font-serif text-4xl text-[var(--heritage-brown)] sm:text-5xl">
+              Khám phá Việt Nam
+            </h1>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-[var(--heritage-muted)]">
+              Khám phá không gian văn hóa và những dấu tích lịch sử trên bản đồ 34 tỉnh, thành Việt Nam.
+            </p>
+          </div>
+
+          <p className="max-w-xs text-sm leading-6 text-[var(--heritage-muted)] sm:text-right">
+            Di chuột để xem tên tỉnh thành, kéo để di chuyển và dùng nút điều khiển để phóng to bản đồ.
           </p>
         </div>
-      </div>
-      <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
-        <VietnamMap landmarks={landmarks} />
-        <div className="space-y-3">
-          {landmarks.map((landmark) => (
-            <Link
-              key={landmark.id}
-              to={`/landmarks/${landmark.id}`}
-              className="block overflow-hidden rounded border border-ink/10 bg-white shadow-soft transition hover:-translate-y-0.5 hover:border-leaf/40"
-            >
-              <img className="h-36 w-full object-cover" src={landmark.imageUrl} alt={landmark.name} />
-              <div className="p-4">
-                <p className="text-sm font-semibold text-clay">{landmark.province}</p>
-                <h2 className="mt-1 text-lg font-semibold">{landmark.name}</h2>
-                <p className="mt-2 line-clamp-2 text-sm leading-6 text-ink/60">{landmark.shortDescription}</p>
+
+        <div className="grid gap-5 lg:grid-cols-[2fr_3fr]">
+          <div className="min-w-0">
+            <ProvinceGeoJsonMap
+              className="h-[620px] min-h-[620px] border border-[var(--heritage-line)] shadow-[0_20px_48px_rgba(45,40,32,0.14)]"
+              markers={[thangLongCitadel]}
+              activeMarkerId={selectedMarker?.id}
+              onMarkerClick={setSelectedMarker}
+            />
+            <div className="mt-3 rounded-lg border border-[var(--heritage-line)] bg-[rgba(255,250,240,0.72)] p-4">
+              <p className="font-serif text-lg text-[var(--heritage-brown)]">{thangLongCitadel.name}</p>
+              <p className="mt-1 text-sm leading-6 text-[var(--heritage-muted)]">{thangLongCitadel.address}</p>
+              <p className="mt-1 text-xs text-[var(--heritage-muted)]">21.039444°B, 105.837222°Đ · Bấm marker để xem hiện vật 3D</p>
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            {selectedMarker ? (
+              <HeritageModelViewer src={sealModelUrl} title="Ấn Sắc mệnh chi bảo" />
+            ) : (
+              <div className="grid h-[620px] min-h-[620px] place-items-center overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[var(--heritage-paper-deep)] p-8 text-center shadow-[0_20px_48px_rgba(45,40,32,0.14)]">
+                <div className="max-w-sm">
+                  <MapPinned className="mx-auto text-[var(--heritage-bronze)]" size={42} strokeWidth={1.4} />
+                  <h2 className="mt-5 font-serif text-2xl text-[var(--heritage-brown)]">Chọn một địa điểm trên bản đồ</h2>
+                  <p className="mt-3 text-sm leading-6 text-[var(--heritage-muted)]">
+                    Bấm vào marker Hoàng thành Thăng Long để mở và tương tác với model Ấn Sắc mệnh chi bảo.
+                  </p>
+                </div>
               </div>
-            </Link>
-          ))}
+            )}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
-
