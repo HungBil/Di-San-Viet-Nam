@@ -45,7 +45,9 @@ export function Shell({ children }: { children: ReactNode }) {
                 Khám phá
               </NavLink>
               <span className="glass-navbar-link px-3 py-2">Tỉnh thành</span>
-              <span className="glass-navbar-link px-3 py-2">Bảo tàng 3D</span>
+              <NavLink className={({ isActive }) => navClass(isActive)} to="/3d">
+                Bảo tàng 3D
+              </NavLink>
               <span className="glass-navbar-link px-3 py-2">Câu chuyện lịch sử</span>
               <span className="glass-navbar-link px-3 py-2">Sự kiện</span>
             </nav>
