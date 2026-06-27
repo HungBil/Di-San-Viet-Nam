@@ -6,6 +6,7 @@ import { ProvinceGeoJsonMap, type MapMarker } from "../components/map/ProvinceGe
 const thangLongCitadel: MapMarker = {
   id: "thang-long-citadel",
   name: "Hoàng thành Thăng Long",
+  image: "/images/hoang-thanh-thang-long.webp",
   latitude: 21.039444,
   longitude: 105.837222,
   address: "19C Hoàng Diệu, phường Điện Biên, quận Ba Đình, Hà Nội"
@@ -46,11 +47,6 @@ export function MapPage() {
               activeMarkerId={selectedMarker?.id}
               onMarkerClick={setSelectedMarker}
             />
-            <div className="mt-3 rounded-lg border border-[var(--heritage-line)] bg-[rgba(255,250,240,0.72)] p-4">
-              <p className="font-serif text-lg text-[var(--heritage-brown)]">{thangLongCitadel.name}</p>
-              <p className="mt-1 text-sm leading-6 text-[var(--heritage-muted)]">{thangLongCitadel.address}</p>
-              <p className="mt-1 text-xs text-[var(--heritage-muted)]">21.039444°B, 105.837222°Đ · Bấm marker để xem hiện vật 3D</p>
-            </div>
           </div>
 
           <div className="min-w-0">

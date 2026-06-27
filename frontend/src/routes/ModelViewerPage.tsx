@@ -130,7 +130,7 @@ export function ModelViewerPage() {
     renderer.setPixelRatio(1);
     renderer.outputColorSpace = "srgb";
     renderer.setClearAlpha(0);
-    mountElement.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
