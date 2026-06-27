@@ -31,7 +31,19 @@ type DragState = {
 };
 
 type ProvinceGeoJsonMapProps = {
+  activeMarkerId?: string | null;
   className?: string;
+  markers?: MapMarker[];
+  onMarkerClick?: (marker: MapMarker) => void;
+};
+
+export type MapMarker = {
+  address?: string;
+  id: string;
+  image?: string;
+  latitude: number;
+  longitude: number;
+  name: string;
 };
 
 const viewBoxWidth = 300;
@@ -89,9 +101,10 @@ const mapLegend = [
   { label: "Di sản văn hóa", color: "#6f5830" }
 ];
 
-export function ProvinceGeoJsonMap({ className = "" }: ProvinceGeoJsonMapProps) {
+export function ProvinceGeoJsonMap({ activeMarkerId = null, className = "", markers = [], onMarkerClick }: ProvinceGeoJsonMapProps) {
   const [loadedProvinces, setLoadedProvinces] = useState<LoadedProvince[]>([]);
   const [activeCode, setActiveCode] = useState<string | null>(null);
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(minZoom);
   const [pan, setPan] = useState<Pan>({ x: 0, y: 0 });
@@ -145,8 +158,8 @@ export function ProvinceGeoJsonMap({ className = "" }: ProvinceGeoJsonMapProps) 
     return () => controller.abort();
   }, []);
 
-  const paths = useMemo(() => {
-    if (loadedProvinces.length === 0) return [];
+  const renderedMap = useMemo(() => {
+    if (loadedProvinces.length === 0) return { paths: [], projectedMarkers: [] };
 
     const collection = {
       type: "FeatureCollection",
@@ -162,13 +175,28 @@ export function ProvinceGeoJsonMap({ className = "" }: ProvinceGeoJsonMapProps) 
     );
     const path = geoPath(projection);
 
-    return loadedProvinces.map((province) => ({
-      ...province,
-      path: path(province.feature as GeoPermissibleObjects) ?? ""
-    }));
-  }, [loadedProvinces]);
+    return {
+      paths: loadedProvinces.map((province) => ({
+        ...province,
+        path: path(province.feature as GeoPermissibleObjects) ?? ""
+      })),
+      projectedMarkers: markers.flatMap((marker) => {
+        const point = projection([marker.longitude, marker.latitude]);
+        return point ? [{ ...marker, x: point[0], y: point[1] }] : [];
+      })
+    };
+  }, [loadedProvinces, markers]);
+
+  const { paths, projectedMarkers } = renderedMap;
 
   const activeProvince = paths.find((province) => province.code === activeCode);
+  const hoveredMarker = projectedMarkers.find((marker) => marker.id === hoveredMarkerId);
+  const markerTooltipPosition = hoveredMarker
+    ? {
+        left: `${((viewBoxCenterX + zoom * baseMapScaleX * (hoveredMarker.x - viewBoxCenterX) + pan.x + baseMapOffsetX) / viewBoxWidth) * 100}%`,
+        top: `${((viewBoxCenterY + zoom * baseMapScaleY * (hoveredMarker.y - viewBoxCenterY) + pan.y) / viewBoxHeight) * 100}%`
+      }
+    : null;
 
   function clampPan(nextPan: Pan, nextZoom = zoom) {
     if (nextZoom <= minZoom) return { x: 0, y: 0 };
@@ -272,9 +300,62 @@ export function ProvinceGeoJsonMap({ className = "" }: ProvinceGeoJsonMapProps) 
                 </path>
               );
             })}
+            {projectedMarkers.map((marker) => {
+              const isActive = marker.id === activeMarkerId;
+
+              return (
+                <g
+                  key={marker.id}
+                  className="cursor-pointer outline-none"
+                  transform={`translate(${marker.x} ${marker.y})`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${marker.name}. ${marker.address ?? ""}`}
+                  onMouseEnter={() => setHoveredMarkerId(marker.id)}
+                  onMouseLeave={() => setHoveredMarkerId(null)}
+                  onFocus={() => setHoveredMarkerId(marker.id)}
+                  onBlur={() => setHoveredMarkerId(null)}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onMarkerClick?.(marker);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onMarkerClick?.(marker);
+                    }
+                  }}
+                >
+                  <circle r={isActive ? 8 : 7} fill="rgba(155,122,58,0.22)" stroke="none" className="animate-pulse" />
+                  <circle r={isActive ? 4.2 : 3.6} fill={isActive ? "#6f5830" : "#9b7a3a"} stroke="#fffaf0" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                  <title>{marker.name}</title>
+                </g>
+              );
+            })}
           </g>
         </g>
       </svg>
+      {hoveredMarker && markerTooltipPosition ? (
+        <div
+          className="pointer-events-none absolute z-20 grid w-72 -translate-y-1/2 grid-cols-[92px_1fr] overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[var(--heritage-paper-light)] text-left shadow-[0_16px_36px_rgba(45,40,32,0.24)]"
+          style={{ left: `calc(${markerTooltipPosition.left} + 12px)`, top: markerTooltipPosition.top }}
+          role="tooltip"
+        >
+          {hoveredMarker.image ? (
+            <img className="heritage-image h-full min-h-24 w-full object-cover" src={hoveredMarker.image} alt="" />
+          ) : (
+            <div className="bg-[var(--heritage-paper-deep)]" />
+          )}
+          <div className="min-w-0 p-3">
+            <p className="font-serif text-sm leading-5 text-[var(--heritage-brown)]">{hoveredMarker.name}</p>
+            {hoveredMarker.address ? <p className="mt-1 text-[11px] leading-4 text-[var(--heritage-muted)]">{hoveredMarker.address}</p> : null}
+            <p className="mt-1.5 text-[10px] text-[var(--heritage-muted)]">
+              {hoveredMarker.latitude.toFixed(6)}°B · {hoveredMarker.longitude.toFixed(6)}°Đ
+            </p>
+          </div>
+        </div>
+      ) : null}
       <div className="absolute right-3 top-3 grid gap-2">
         <button
           type="button"
