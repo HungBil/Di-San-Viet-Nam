@@ -40,6 +40,7 @@ const viewBoxCenterX = viewBoxWidth / 2;
 const viewBoxCenterY = viewBoxHeight / 2;
 const baseMapScaleX = 1.22;
 const baseMapScaleY = 1.04;
+const baseMapOffsetX = 36;
 const minZoom = 1;
 const maxZoom = 4;
 const zoomStep = 0.4;
@@ -247,7 +248,7 @@ export function ProvinceGeoJsonMap({ className = "" }: ProvinceGeoJsonMapProps) 
         onPointerCancel={onPointerEnd}
         onPointerLeave={onPointerEnd}
       >
-        <g transform={`translate(${pan.x} ${pan.y})`}>
+        <g transform={`translate(${pan.x + baseMapOffsetX} ${pan.y})`}>
           <g transform={`translate(${viewBoxCenterX} ${viewBoxCenterY}) scale(${zoom}) scale(${baseMapScaleX} ${baseMapScaleY}) translate(${-viewBoxCenterX} ${-viewBoxCenterY})`}>
             {paths.map((province) => {
               const isActive = province.code === activeCode;
