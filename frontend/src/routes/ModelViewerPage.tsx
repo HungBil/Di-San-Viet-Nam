@@ -1,4 +1,4 @@
-import { Box, Maximize2, RotateCcw, Upload } from "lucide-react";
+import { Box, Maximize2, RefreshCw, RotateCcw, Upload } from "lucide-react";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   AmbientLight,
@@ -60,11 +60,21 @@ const localModels: GlbModel[] = [
   },
 ];
 
-const modelCameraPresets: Record<string, { direction: Vector3; zoom: number; targetOffset?: Vector3 }> = {
+const modelCameraPresets: Record<
+  string,
+  { direction: Vector3; zoom: number; targetOffset?: Vector3 }
+> = {
   [hoaKhiemModelPath]: { direction: new Vector3(0.25, 0.44, 1.18), zoom: 0.28 },
   [sealModelPath]: { direction: new Vector3(0, 0.42, 1), zoom: 1.02 },
-  "one-pillar-pagoda-chua-mot-cot-compressed.glb": { direction: new Vector3(0, 0.3, 1), zoom: 0.68 },
-  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": { direction: new Vector3(0, -1, 0.24), zoom: 0.68, targetOffset: new Vector3(0.16, 0, 0.04) },
+  "one-pillar-pagoda-chua-mot-cot-compressed.glb": {
+    direction: new Vector3(0, 0.3, 1),
+    zoom: 0.68,
+  },
+  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": {
+    direction: new Vector3(0, -1, 0.24),
+    zoom: 0.68,
+    targetOffset: new Vector3(0.16, 0, 0.04),
+  },
 };
 
 const brighterModelPaths = new Set([
@@ -148,6 +158,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(
     null,
   );
+  const [isAutoRotating, setIsAutoRotating] = useState(false);
   const [annotationPoints, setAnnotationPoints] = useState<
     { annotation: Annotation; left: number; top: number; visible: boolean }[]
   >([]);
@@ -199,6 +210,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    controls.autoRotateSpeed = 4.8;
 
     sceneRef.current = scene;
     cameraRef.current = camera;
@@ -255,7 +267,11 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
     }
     setActiveAnnotation(null);
     setAnnotationPoints([]);
-    setModelLighting(selectedPath, ambientLightRef.current, keyLightRef.current);
+    setModelLighting(
+      selectedPath,
+      ambientLightRef.current,
+      keyLightRef.current,
+    );
     setStatus("loading");
     setProgress(0);
     setError("");
@@ -315,6 +331,22 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
       cameraRef.current,
       controlsRef.current,
     );
+  }
+
+  function toggleAutoRotate() {
+    setIsAutoRotating((current) => {
+      const next = !current;
+      if (controlsRef.current) controlsRef.current.autoRotate = next;
+      return next;
+    });
+  }
+
+  function resetCamera() {
+    if (controlsRef.current) {
+      controlsRef.current.autoRotate = false;
+      controlsRef.current.reset();
+    }
+    setIsAutoRotating(false);
   }
 
   return (
@@ -464,21 +496,36 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
           <div className="absolute bottom-4 right-4 flex gap-2">
             <button
               className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]"
-              onClick={() =>
+              onClick={() => {
+                if (controlsRef.current) controlsRef.current.autoRotate = false;
+                setIsAutoRotating(false);
                 frameModel(
                   modelRef.current,
                   cameraRef.current,
                   controlsRef.current,
                   selectedPath,
-                )
-              }
+                );
+              }}
               aria-label="Căn lại model"
             >
               <Maximize2 size={18} />
             </button>
             <button
+              className={[
+                "grid h-10 w-10 place-items-center rounded text-[#102832] transition",
+                isAutoRotating ? "bg-gold" : "bg-white hover:bg-gold/70",
+              ].join(" ")}
+              onClick={toggleAutoRotate}
+              aria-pressed={isAutoRotating}
+              aria-label={
+                isAutoRotating ? "Tắt tự xoay model" : "Bật tự xoay model"
+              }
+            >
+              <RefreshCw size={18} />
+            </button>
+            <button
               className="grid h-10 w-10 place-items-center rounded bg-white text-[#102832]"
-              onClick={() => controlsRef.current?.reset()}
+              onClick={resetCamera}
               aria-label="Reset camera"
             >
               <RotateCcw size={18} />
@@ -524,14 +571,22 @@ function frameModel(
   const preset = modelPath ? modelCameraPresets[modelPath] : undefined;
   const target = center.clone();
   if (preset?.targetOffset) {
-    target.add(new Vector3(size.x * preset.targetOffset.x, size.y * preset.targetOffset.y, size.z * preset.targetOffset.z));
+    target.add(
+      new Vector3(
+        size.x * preset.targetOffset.x,
+        size.y * preset.targetOffset.y,
+        size.z * preset.targetOffset.z,
+      ),
+    );
   }
-  const distance = (maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360))) * (preset?.zoom ?? 1);
-  const direction = preset?.direction.clone().normalize() ?? new Vector3(1, 0.55, 1).normalize();
+  const distance =
+    (maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360))) *
+    (preset?.zoom ?? 1);
+  const direction =
+    preset?.direction.clone().normalize() ??
+    new Vector3(1, 0.55, 1).normalize();
 
-  camera.position
-    .copy(target)
-    .add(direction.multiplyScalar(distance));
+  camera.position.copy(target).add(direction.multiplyScalar(distance));
   camera.near = Math.max(0.01, distance / 100);
   camera.far = distance * 100;
   camera.updateProjectionMatrix();
@@ -541,7 +596,11 @@ function frameModel(
   controls.saveState();
 }
 
-function setModelLighting(modelPath: string | undefined, ambientLight: AmbientLight | null, keyLight: DirectionalLight | null) {
+function setModelLighting(
+  modelPath: string | undefined,
+  ambientLight: AmbientLight | null,
+  keyLight: DirectionalLight | null,
+) {
   const brighter = modelPath ? brighterModelPaths.has(modelPath) : false;
   if (ambientLight) ambientLight.intensity = brighter ? 2.35 : 1.8;
   if (keyLight) keyLight.intensity = brighter ? 3.1 : 2.4;
@@ -620,6 +679,12 @@ function formatBytes(bytes: number) {
 function getInitialModel(models: GlbModel[]) {
   if (typeof window === "undefined") return models[0];
 
-  const requestedModel = new URLSearchParams(window.location.search).get("model");
-  return models.find((model) => model.path === requestedModel || model.name === requestedModel) ?? models[0];
+  const requestedModel = new URLSearchParams(window.location.search).get(
+    "model",
+  );
+  return (
+    models.find(
+      (model) => model.path === requestedModel || model.name === requestedModel,
+    ) ?? models[0]
+  );
 }
