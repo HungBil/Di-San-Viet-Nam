@@ -29,25 +29,25 @@ const annotationSets: Record<string, Annotation[]> = {
       id: 1,
       title: "Mặt ấn",
       body: "Hình vuông, đúc nổi 4 chữ Hán kiểu chữ Triện. Chữ đọc từ trên xuống dưới, từ phải qua trái là Sắc mệnh chi bảo.",
-      position: new Vector3(0.02, -0.255, -0.93)
+      position: new Vector3(-0.1228, -0.2089, -0.8014)
     },
     {
       id: 2,
       title: "Quai ấn",
       body: "Quai ấn tạo hình rồng cuộn, đầu vươn về phía trước, hai sừng dài, đuôi xòe thành nhiều dải.",
-      position: new Vector3(-0.04, 0.13, -0.88)
+      position: new Vector3(-0.0073, 0.0109, -0.8839)
     },
     {
       id: 3,
       title: "Dòng lạc khoản bên trái",
       body: "Dòng ghi trọng lượng và chất liệu của bảo ấn.",
-      position: new Vector3(-0.11, -0.245, -0.9)
+      position: new Vector3(-0.168, -0.0919, -1.0241)
     },
     {
       id: 4,
       title: "Dòng lạc khoản bên phải",
       body: "Dòng ghi niên đại đúc ấn thời Minh Mệnh.",
-      position: new Vector3(0.15, -0.245, -0.9)
+      position: new Vector3(0.1496, -0.1596, -0.8073)
     }
   ],
   [hoaKhiemModelPath]: [
@@ -55,7 +55,7 @@ const annotationSets: Record<string, Annotation[]> = {
       id: 1,
       title: "Xung Khiêm Tạ",
       body: "Công trình nằm bên hồ Lưu Khiêm, là nơi vua Tự Đức ngắm cảnh, hóng mát và làm thơ.",
-      position: new Vector3(66, -8, -62)
+      position: new Vector3(12.8239, -21.5856, -34.5832)
     },
     {
       id: 2,
@@ -67,7 +67,7 @@ const annotationSets: Record<string, Annotation[]> = {
       id: 3,
       title: "Hòa Khiêm Điện",
       body: "Công trình trung tâm trong khu tẩm điện, sau dùng làm nơi thờ phụng.",
-      position: new Vector3(-18, 20, -135)
+      position: new Vector3(7.6373, 27.7562, -140.8787)
     }
   ]
 };
@@ -114,6 +114,7 @@ export function ModelViewerPage() {
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
+    const container = mount;
 
     const scene = new Scene();
     scene.add(new AmbientLight("#ffffff", 1.8));
@@ -139,9 +140,9 @@ export function ModelViewerPage() {
     controlsRef.current = controls;
 
     function resize() {
-      camera.aspect = mount.clientWidth / Math.max(1, mount.clientHeight);
+      camera.aspect = container.clientWidth / Math.max(1, container.clientHeight);
       camera.updateProjectionMatrix();
-      renderer.setSize(mount.clientWidth, mount.clientHeight);
+      renderer.setSize(container.clientWidth, container.clientHeight);
     }
 
     let lastAnnotationUpdate = 0;
@@ -150,7 +151,7 @@ export function ModelViewerPage() {
       renderer.render(scene, camera);
       if (now - lastAnnotationUpdate > 100) {
         lastAnnotationUpdate = now;
-        if (annotationsRef.current.length > 0) setAnnotationPoints(projectAnnotations(annotationsRef.current, camera, mount));
+        if (annotationsRef.current.length > 0) setAnnotationPoints(projectAnnotations(annotationsRef.current, camera, container));
       }
       requestAnimationFrame(animate);
     }
@@ -228,12 +229,17 @@ export function ModelViewerPage() {
     setSelectedName(file.name.replace(/\.glb$/i, ""));
   }
 
+  function openAnnotation(annotation: Annotation) {
+    setActiveAnnotation(annotation);
+    focusAnnotation(annotation, modelRef.current, cameraRef.current, controlsRef.current);
+  }
+
   return (
     <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <div className="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-end">
         <div>
           <h1 className="text-3xl font-semibold">Bảo tàng 3D</h1>
-          <p className="mt-2 text-sm text-ink/65">Đặt file .glb ở root repo, rồi sửa marker trong ModelViewerPage.tsx.</p>
+          <p className="mt-2 text-sm text-ink/65">Đặt file .glb vào frontend/public/models, rồi sửa marker trong ModelViewerPage.tsx.</p>
         </div>
         <label className="inline-flex cursor-pointer items-center gap-2 rounded bg-[#102832] px-4 py-2 text-sm font-semibold text-white">
           <Upload size={16} />
@@ -249,7 +255,7 @@ export function ModelViewerPage() {
             File GLB
           </div>
           <div className="space-y-2">
-            {models.length === 0 && <p className="text-sm text-ink/60">Chưa có file .glb ở root repo.</p>}
+            {models.length === 0 && <p className="text-sm text-ink/60">Chưa có file .glb trong frontend/public/models.</p>}
             {models.map((model) => (
               <button
                 key={model.path}
@@ -277,7 +283,7 @@ export function ModelViewerPage() {
                 activeAnnotation?.id === annotation.id ? "bg-gold text-ink" : "hover:bg-gold hover:text-ink"
               ].join(" ")}
               style={{ left, top }}
-              onClick={() => setActiveAnnotation(annotation)}
+              onClick={() => openAnnotation(annotation)}
               aria-label={`Mở chú thích ${annotation.id}: ${annotation.title}`}
             >
               {annotation.id}
@@ -353,6 +359,46 @@ function frameModel(model: Object3D | null, camera: PerspectiveCamera | null, co
   controls.target.copy(center);
   controls.update();
   controls.saveState();
+}
+
+function focusAnnotation(annotation: Annotation, model: Object3D | null, camera: PerspectiveCamera | null, controls: OrbitControls | null) {
+  if (!model || !camera || !controls) return;
+
+  const box = new Box3().setFromObject(model);
+  const size = box.getSize(new Vector3());
+  const center = box.getCenter(new Vector3());
+  const maxSize = Math.max(size.x, size.y, size.z) || 1;
+  const target = annotation.position.clone();
+  const direction = target.clone().sub(center);
+
+  if (direction.lengthSq() < 0.0001) {
+    direction.copy(camera.position).sub(target);
+  }
+
+  direction.normalize();
+  const distance = Math.max(maxSize * 0.14, maxSize < 5 ? 0.7 : 8);
+  const endPosition = target.clone().add(direction.multiplyScalar(distance));
+  animateCamera(camera, controls, endPosition, target);
+}
+
+function animateCamera(camera: PerspectiveCamera, controls: OrbitControls, endPosition: Vector3, endTarget: Vector3) {
+  const startPosition = camera.position.clone();
+  const startTarget = controls.target.clone();
+  const startedAt = performance.now();
+  const duration = 520;
+
+  function tick(now: number) {
+    const progress = Math.min(1, (now - startedAt) / duration);
+    const eased = 1 - (1 - progress) ** 3;
+
+    camera.position.lerpVectors(startPosition, endPosition, eased);
+    controls.target.lerpVectors(startTarget, endTarget, eased);
+    controls.update();
+
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+
+  requestAnimationFrame(tick);
 }
 
 function disposeModel(model: Object3D) {
