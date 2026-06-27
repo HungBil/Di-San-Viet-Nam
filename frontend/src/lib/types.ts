@@ -82,6 +82,13 @@ export type ChatMessage = {
   content: string;
 };
 
+export type GlbModel = {
+  name: string;
+  path: string;
+  url: string;
+  size: number;
+};
+
 export type TtsResponse = {
   audioUrl: string | null;
   message: string;
