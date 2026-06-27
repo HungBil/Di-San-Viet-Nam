@@ -62,11 +62,11 @@ const localModels: GlbModel[] = [
 
 const modelCameraSettings: Record<
   string,
-  { distanceScale: number; heightScale: number }
+  { distanceScale: number; view: Vector3 }
 > = {
   [hoaKhiemModelPath]: {
     distanceScale: 0.28,
-    heightScale: 0.44,
+    view: new Vector3(0.25, 0.44, 1.18),
   },
 };
 
@@ -133,7 +133,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   const annotationsRef = useRef<Annotation[]>([]);
 
   const models = embeddedModel ? [embeddedModel] : localModels;
-  const initialModel = models[0];
+  const initialModel = getInitialModel(models);
   const [selectedUrl, setSelectedUrl] = useState(initialModel?.url ?? "");
   const [selectedName, setSelectedName] = useState(
     initialModel ? (modelTitles[initialModel.path] ?? initialModel.name) : "",
@@ -515,13 +515,13 @@ function frameModel(
   const maxSize = Math.max(size.x, size.y, size.z) || 1;
   const cameraSettings = modelCameraSettings[modelPath ?? ""];
   const distanceScale = cameraSettings?.distanceScale ?? 1;
-  const heightScale = cameraSettings?.heightScale ?? 0.55;
+  const view = cameraSettings?.view ?? new Vector3(1, 0.55, 1);
   const distance =
     (maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360))) * distanceScale;
 
   camera.position
     .copy(center)
-    .add(new Vector3(distance, distance * heightScale, distance));
+    .add(new Vector3(distance * view.x, distance * view.y, distance * view.z));
   camera.near = Math.max(0.01, distance / 100);
   camera.far = distance * 100;
   camera.updateProjectionMatrix();
@@ -599,4 +599,11 @@ function disposeModel(model: Object3D) {
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${Math.round(bytes / 1024 / 1024)} MB`;
+}
+
+function getInitialModel(models: GlbModel[]) {
+  if (typeof window === "undefined") return models[0];
+
+  const requestedModel = new URLSearchParams(window.location.search).get("model");
+  return models.find((model) => model.path === requestedModel || model.name === requestedModel) ?? models[0];
 }
