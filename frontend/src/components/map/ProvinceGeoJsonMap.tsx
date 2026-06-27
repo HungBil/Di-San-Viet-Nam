@@ -39,6 +39,7 @@ type ProvinceGeoJsonMapProps = {
 
 export type MapMarker = {
   address?: string;
+  description?: string;
   id: string;
   image?: string;
   latitude: number;
@@ -350,6 +351,7 @@ export function ProvinceGeoJsonMap({ activeMarkerId = null, className = "", mark
           <div className="min-w-0 p-3">
             <p className="font-serif text-sm leading-5 text-[var(--heritage-brown)]">{hoveredMarker.name}</p>
             {hoveredMarker.address ? <p className="mt-1 text-[11px] leading-4 text-[var(--heritage-muted)]">{hoveredMarker.address}</p> : null}
+            {hoveredMarker.description ? <p className="mt-1 line-clamp-3 text-[10px] leading-4 text-[var(--heritage-muted)]">{hoveredMarker.description}</p> : null}
             <p className="mt-1.5 text-[10px] text-[var(--heritage-muted)]">
               {hoveredMarker.latitude.toFixed(6)}°B · {hoveredMarker.longitude.toFixed(6)}°Đ
             </p>
