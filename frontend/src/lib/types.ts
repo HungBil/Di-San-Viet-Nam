@@ -110,6 +110,10 @@ export type TtsResponse = {
   provider: VoiceProvider;
 };
 
+export type AnnotationNarrationResponse = {
+  text: string;
+};
+
 export type SttResponse = {
   text: string;
   provider: VoiceProvider;
