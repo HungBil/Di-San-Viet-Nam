@@ -30,21 +30,50 @@ const modelTitles: Record<string, string> = {
   [sealModelPath]: "Ấn Sắc mệnh chi bảo",
   [hoaKhiemModelPath]: "Lăng vua Tự Đức - khu Hòa Khiêm",
   "one-pillar-pagoda-chua-mot-cot-compressed.glb": "Chùa Một Cột",
-  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": "Xe tăng 843"
+  "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb": "Xe tăng 843",
 };
 
 const localModels: GlbModel[] = [
-  { name: "Ấn Sắc mệnh chi bảo", path: sealModelPath, url: `/models/${encodeURIComponent(sealModelPath)}`, size: 7848516 },
-  { name: "Lăng vua Tự Đức - khu Hòa Khiêm", path: hoaKhiemModelPath, url: `/models/${encodeURIComponent(hoaKhiemModelPath)}`, size: 20792420 },
-  { name: "Chùa Một Cột", path: "one-pillar-pagoda-chua-mot-cot-compressed.glb", url: "/models/one-pillar-pagoda-chua-mot-cot-compressed.glb", size: 2991400 },
-  { name: "Xe tăng 843", path: "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb", url: "/models/tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb", size: 6058444 }
+  {
+    name: "Ấn Sắc mệnh chi bảo",
+    path: sealModelPath,
+    url: `/models/${encodeURIComponent(sealModelPath)}`,
+    size: 7848516,
+  },
+  {
+    name: "Lăng vua Tự Đức - khu Hòa Khiêm",
+    path: hoaKhiemModelPath,
+    url: `/models/${encodeURIComponent(hoaKhiemModelPath)}`,
+    size: 20792420,
+  },
+  {
+    name: "Chùa Một Cột",
+    path: "one-pillar-pagoda-chua-mot-cot-compressed.glb",
+    url: "/models/one-pillar-pagoda-chua-mot-cot-compressed.glb",
+    size: 2991400,
+  },
+  {
+    name: "Xe tăng 843",
+    path: "tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb",
+    url: "/models/tank-843-ho-chi-minh-mobile-phone-capture_compressed.glb",
+    size: 6058444,
+  },
 ];
+
+const modelCameraSettings: Record<
+  string,
+  { distanceScale: number; heightScale: number }
+> = {
+  [hoaKhiemModelPath]: {
+    distanceScale: 0.28,
+    heightScale: 0.44,
+  },
+};
 
 type ModelViewerPageProps = {
   embeddedModel?: GlbModel;
 };
 
-// Sửa vị trí marker ở `position: new Vector3(x, y, z)`.
 const annotationSets: Record<string, Annotation[]> = {
   [sealModelPath]: [
     {
@@ -106,15 +135,29 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   const models = embeddedModel ? [embeddedModel] : localModels;
   const initialModel = models[0];
   const [selectedUrl, setSelectedUrl] = useState(initialModel?.url ?? "");
-  const [selectedName, setSelectedName] = useState(initialModel ? modelTitles[initialModel.path] ?? initialModel.name : "");
+  const [selectedName, setSelectedName] = useState(
+    initialModel ? (modelTitles[initialModel.path] ?? initialModel.name) : "",
+  );
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
-  const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(null);
-  const [annotationPoints, setAnnotationPoints] = useState<{ annotation: Annotation; left: number; top: number; visible: boolean }[]>([]);
-  const selectedPath = useMemo(() => models.find((model) => model.url === selectedUrl)?.path, [models, selectedUrl]);
-  const annotations = status === "ready" && annotationSets[selectedPath ?? ""] ? annotationPoints : [];
-  const activePoint = annotations.find((point) => point.annotation.id === activeAnnotation?.id);
+  const [activeAnnotation, setActiveAnnotation] = useState<Annotation | null>(
+    null,
+  );
+  const [annotationPoints, setAnnotationPoints] = useState<
+    { annotation: Annotation; left: number; top: number; visible: boolean }[]
+  >([]);
+  const selectedPath = useMemo(
+    () => models.find((model) => model.url === selectedUrl)?.path,
+    [models, selectedUrl],
+  );
+  const annotations =
+    status === "ready" && annotationSets[selectedPath ?? ""]
+      ? annotationPoints
+      : [];
+  const activePoint = annotations.find(
+    (point) => point.annotation.id === activeAnnotation?.id,
+  );
 
   useEffect(() => {
     annotationsRef.current = annotationSets[selectedPath ?? ""] ?? [];
@@ -215,7 +258,12 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
         if (cancelled) return;
         modelRef.current = gltf.scene;
         sceneRef.current?.add(gltf.scene);
-        frameModel(gltf.scene, cameraRef.current, controlsRef.current);
+        frameModel(
+          gltf.scene,
+          cameraRef.current,
+          controlsRef.current,
+          selectedPath,
+        );
         setStatus("ready");
       },
       (event) => {
@@ -262,8 +310,18 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
   }
 
   return (
-    <section className={embeddedModel ? "h-full" : "mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"}>
-      <div className={embeddedModel ? "hidden" : "mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-end"}>
+    <section
+      className={
+        embeddedModel ? "h-full" : "mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8"
+      }
+    >
+      <div
+        className={
+          embeddedModel
+            ? "hidden"
+            : "mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-end"
+        }
+      >
         <div>
           <h1 className="text-3xl font-semibold">Bảo tàng 3D</h1>
           <p className="mt-2 text-sm text-ink/65">
@@ -283,8 +341,20 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
         </label>
       </div>
 
-      <div className={embeddedModel ? "h-full min-h-[620px] overflow-hidden rounded-lg border border-ink/10 bg-white shadow-soft" : "grid min-h-[680px] overflow-hidden rounded border border-ink/10 bg-white shadow-soft lg:grid-cols-[320px_1fr]"}>
-        <aside className={embeddedModel ? "hidden" : "border-b border-ink/10 bg-paper p-4 lg:border-b-0 lg:border-r"}>
+      <div
+        className={
+          embeddedModel
+            ? "h-full min-h-[620px] overflow-hidden rounded-lg border border-ink/10 bg-white shadow-soft"
+            : "grid min-h-[680px] overflow-hidden rounded border border-ink/10 bg-white shadow-soft lg:grid-cols-[320px_1fr]"
+        }
+      >
+        <aside
+          className={
+            embeddedModel
+              ? "hidden"
+              : "border-b border-ink/10 bg-paper p-4 lg:border-b-0 lg:border-r"
+          }
+        >
           <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
             <Box size={18} />
             File GLB
@@ -317,7 +387,13 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
           </div>
         </aside>
 
-        <div className={embeddedModel ? "relative h-full min-h-[620px] bg-[radial-gradient(circle_at_48%_36%,#5a5a5a_0%,#3d3d3d_30%,#242424_58%,#111111_100%)]" : "relative min-h-[680px] bg-[radial-gradient(circle_at_48%_36%,#5a5a5a_0%,#3d3d3d_30%,#242424_58%,#111111_100%)]"}>
+        <div
+          className={
+            embeddedModel
+              ? "relative h-full min-h-[620px] bg-[radial-gradient(circle_at_48%_36%,#5a5a5a_0%,#3d3d3d_30%,#242424_58%,#111111_100%)]"
+              : "relative min-h-[680px] bg-[radial-gradient(circle_at_48%_36%,#5a5a5a_0%,#3d3d3d_30%,#242424_58%,#111111_100%)]"
+          }
+        >
           <div ref={mountRef} className="absolute inset-0" />
           {annotations.map(({ annotation, left, top, visible }) => (
             <button
@@ -385,6 +461,7 @@ export function ModelViewerPage({ embeddedModel }: ModelViewerPageProps = {}) {
                   modelRef.current,
                   cameraRef.current,
                   controlsRef.current,
+                  selectedPath,
                 )
               }
               aria-label="Căn lại model"
@@ -428,6 +505,7 @@ function frameModel(
   model: Object3D | null,
   camera: PerspectiveCamera | null,
   controls: OrbitControls | null,
+  modelPath?: string,
 ) {
   if (!model || !camera || !controls) return;
 
@@ -435,11 +513,15 @@ function frameModel(
   const size = box.getSize(new Vector3());
   const center = box.getCenter(new Vector3());
   const maxSize = Math.max(size.x, size.y, size.z) || 1;
-  const distance = maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360));
+  const cameraSettings = modelCameraSettings[modelPath ?? ""];
+  const distanceScale = cameraSettings?.distanceScale ?? 1;
+  const heightScale = cameraSettings?.heightScale ?? 0.55;
+  const distance =
+    (maxSize / (2 * Math.tan((camera.fov * Math.PI) / 360))) * distanceScale;
 
   camera.position
     .copy(center)
-    .add(new Vector3(distance, distance * 0.55, distance));
+    .add(new Vector3(distance, distance * heightScale, distance));
   camera.near = Math.max(0.01, distance / 100);
   camera.far = distance * 100;
   camera.updateProjectionMatrix();
