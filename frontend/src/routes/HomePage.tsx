@@ -1,5 +1,4 @@
 import {
-  Bot,
   ChevronRight,
   Compass,
   Cuboid,
@@ -8,14 +7,13 @@ import {
   MapPin,
   Play,
   Search,
-  Send,
   Share2,
   Telescope,
-  UsersRound,
-  ZoomIn
 } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { CommunityExperiences } from "../components/community/CommunityExperiences";
+import { HomeFooter } from "../components/layout/HomeFooter";
 import { ProvinceGeoJsonMap } from "../components/map/ProvinceGeoJsonMap";
 
 const heroImage = "/images/van-mieu-quoc-tu-giam.webp";
@@ -61,10 +59,10 @@ const featuredPlaces = [
 ];
 
 const featureStrip = [
-  { icon: Cuboid, title: "Tham quan 3D", text: "Không gian di tích được tái hiện có chiều sâu" },
-  { icon: Bot, title: "Thuyết minh AI", text: "Trò chuyện và tra cứu theo từng câu chuyện lịch sử" },
-  { icon: ZoomIn, title: "Dấu tích lịch sử", text: "Theo mạch sự kiện, nhân vật và địa danh" },
-  { icon: UsersRound, title: "Cộng đồng", text: "Lưu giữ ký ức, hình ảnh và tư liệu địa phương" }
+  { title: "Tham quan 3D", text: "Không gian di tích được tái hiện có chiều sâu" },
+  { title: "Thuyết minh AI", text: "Trò chuyện và tra cứu theo từng câu chuyện lịch sử" },
+  { title: "Dấu tích lịch sử", text: "Theo mạch sự kiện, nhân vật và địa danh" },
+  { title: "Cộng đồng", text: "Lưu giữ ký ức, hình ảnh và tư liệu địa phương" }
 ];
 
 const benefits = [
@@ -128,27 +126,9 @@ export function HomePage() {
               Hành trình số hóa bảo tàng, di tích và ký ức văn hóa Việt Nam qua bản đồ, không gian 3D và thuyết minh AI.
             </p>
 
-            <form
-              onSubmit={onSearch}
-              className="mt-7 flex max-w-lg overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[rgba(255,250,240,0.88)] text-[var(--heritage-ink)] shadow-[0_14px_32px_rgba(45,40,32,0.12)] backdrop-blur-[2px]"
-            >
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="min-w-0 flex-1 bg-transparent px-5 py-4 text-base outline-none placeholder:text-[var(--heritage-muted)]"
-                placeholder="Tìm di tích, bảo tàng, địa danh..."
-              />
-              <button className="grid w-14 place-items-center border-l border-[var(--heritage-line)] text-[var(--heritage-brown)]" aria-label="Tìm kiếm">
-                <Search size={22} />
-              </button>
-            </form>
-
             <div className="mt-7 grid gap-4 border-t border-[var(--heritage-line)] pt-5 sm:grid-cols-2 xl:grid-cols-4">
               {featureStrip.map((item) => (
                 <div key={item.title} className="flex gap-3">
-                  <span className="grid h-12 w-12 flex-none place-items-center rounded-lg border border-[var(--heritage-line)] bg-[rgba(248,241,227,0.78)] text-[var(--heritage-bronze)] backdrop-blur-[1px]">
-                    <item.icon size={23} strokeWidth={1.7} />
-                  </span>
                   <span>
                     <span className="block text-sm font-semibold text-[var(--heritage-ink)]">{item.title}</span>
                     <span className="mt-1 block text-xs leading-5 text-[var(--heritage-muted)]">{item.text}</span>
@@ -159,7 +139,7 @@ export function HomePage() {
           </div>
         </div>
         <img
-          className="pointer-events-none absolute bottom-0 left-0 z-10 h-[30%] w-auto object-contain opacity-70 sm:h-[36%] lg:h-[40%]"
+          className="pointer-events-none absolute bottom-5 left-0 z-10 h-[30%] w-auto object-contain opacity-90 sm:h-[36%] lg:h-[40%]"
           src="/images/chim-lac.webp"
           alt=""
           aria-hidden="true"
@@ -168,7 +148,7 @@ export function HomePage() {
 
       <div className="relative">
         <img
-          className="pointer-events-none absolute left-0 top-1/2 z-0 h-[85%] w-auto -translate-y-1/2 scale-400 object-contain opacity-30"
+          className="pointer-events-none absolute left-0 top-1/2 z-0 h-[80%] w-auto -translate-y-1/2 scale-300 object-contain opacity-30"
           src="/images/trong-dong-half.webp"
           alt=""
           aria-hidden="true"
@@ -176,10 +156,28 @@ export function HomePage() {
         <section className="overflow-hidden">
           <div className="relative z-10 mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
             <div className="flex flex-col justify-between gap-4 border-b border-[var(--heritage-line)] pb-4 sm:flex-row sm:items-end">
-              <div>
-                <p className="text-xs uppercase tracking-normal text-[var(--heritage-muted)]">Dấu tích và địa danh</p>
-                <h2 className="mt-2 font-serif text-3xl text-[var(--heritage-brown)]">Điểm đến nổi bật</h2>
+              <div className="flex gap-8 items-end">
+                <div>
+                  <p className="text-xs uppercase tracking-normal text-[var(--heritage-muted)]">Dấu tích và địa danh</p>
+                  <h2 className="mt-2 font-serif text-3xl text-[var(--heritage-brown)]">Điểm đến nổi bật</h2>
+                </div>
+
+                <form
+                  onSubmit={onSearch}
+                  className="flex max-w-md overflow-hidden rounded-lg border border-[var(--heritage-line)] bg-[rgba(255,250,240,0.88)] text-[var(--heritage-ink)] shadow-[0_14px_32px_rgba(45,40,32,0.12)] backdrop-blur-[2px]"
+                >
+                  <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    className="min-w-0 flex-1 bg-transparent px-4 py-2 text-base outline-none placeholder:text-[var(--heritage-muted)]"
+                    placeholder="Tìm kiếm..."
+                  />
+                  <button className="grid w-10 place-items-center border-l border-[var(--heritage-line)] text-[var(--heritage-brown)]" aria-label="Tìm kiếm">
+                    <Search size={22} />
+                  </button>
+                </form>
               </div>
+
               <Link to="/map" className="inline-flex items-center gap-1 text-sm text-[var(--heritage-muted)] transition hover:text-[var(--heritage-bronze)]">
                 Xem tất cả
                 <ChevronRight size={16} />
@@ -268,7 +266,10 @@ export function HomePage() {
             </div>
           </div>
         </section>
+
+        <CommunityExperiences />
       </div>
+      <HomeFooter />
     </div>
   );
 }
