@@ -1,4 +1,4 @@
-import { ArrowUpRight, Camera, Landmark, Mail, MapPin, Share2 } from "lucide-react";
+import { ArrowUpRight, Camera, Mail, MapPin, Share2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const exploreLinks = [
@@ -26,7 +26,7 @@ export function HomeFooter() {
           <div className="max-w-sm">
             <Link to="/" className="inline-flex items-center gap-3" aria-label="Di Sản Việt - Trang chủ">
               <span className="grid h-12 w-12 place-items-center rounded-full border border-[rgba(248,241,227,0.42)] bg-[rgba(248,241,227,0.08)]">
-                <Landmark size={26} strokeWidth={1.6} />
+                <img className="h-10 w-10 rounded-full object-cover" src="/favicon.png" alt="" aria-hidden="true" />
               </span>
               <span>
                 <span className="block font-serif text-2xl">Di Sản Việt</span>

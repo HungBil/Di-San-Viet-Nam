@@ -3,8 +3,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
-load_dotenv(Path(__file__).resolve().parents[3] / ".env", override=True)
+for parent in Path(__file__).resolve().parents:
+    load_dotenv(parent / ".env", override=True)
 
 
 class Settings:

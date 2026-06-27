@@ -14,4 +14,6 @@ __pycache__/
 .agents
 data/
 *.glb
+!frontend/public/models/
+!frontend/public/models/*.glb
 *-dev*.log

@@ -34,7 +34,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-3 px-3 py-3 sm:px-5 lg:flex-nowrap lg:gap-4 lg:px-7">
             <Link to="/" className="flex min-w-0 flex-1 items-center gap-3 lg:flex-none">
               <span className="grid h-10 w-10 flex-none place-items-center rounded-full border border-[#f6d99b]/35 bg-white/10 text-[#f6d99b] shadow-[inset_0_1px_0_rgba(255,255,255,0.24)]">
-                <Landmark size={24} strokeWidth={1.8} />
+                <img className="h-8 w-8 rounded-full object-cover" src="/favicon.png" alt="" aria-hidden="true" />
               </span>
               <span className="min-w-0">
                 <span className="block truncate font-serif text-xl font-semibold leading-5 text-[#f6d99b]">Di Sản Việt</span>
