@@ -1,5 +1,6 @@
 export type AgeGroup = "kids" | "teens" | "adults";
 export type StoryTargetType = "landmark" | "artifact";
+export type VoiceProvider = "elevenlabs" | "openai" | "mock";
 
 export type Landmark = {
   id: string;
@@ -81,3 +82,13 @@ export type ChatMessage = {
   content: string;
 };
 
+export type TtsResponse = {
+  audioUrl: string | null;
+  message: string;
+  provider: VoiceProvider;
+};
+
+export type SttResponse = {
+  text: string;
+  provider: VoiceProvider;
+};

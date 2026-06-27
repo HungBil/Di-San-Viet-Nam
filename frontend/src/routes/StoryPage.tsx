@@ -66,7 +66,7 @@ export function StoryPage() {
         <aside className="space-y-5">
           <section className="rounded border border-ink/10 bg-white p-4 shadow-soft">
             <h2 className="text-lg font-semibold">Voice tư vấn viên</h2>
-            <p className="mt-1 text-sm leading-6 text-ink/60">Demo bằng Web Speech API trong browser.</p>
+            <p className="mt-1 text-sm leading-6 text-ink/60">Tạo giọng bằng provider, có fallback trong browser.</p>
             <div className="mt-4">
               <VoicePlayback text={`${story.title}. ${story.summary}. ${story.content}`} />
             </div>
@@ -96,4 +96,3 @@ function ageLabel(ageGroup: Story["ageGroup"]) {
     adults: "Người lớn"
   }[ageGroup];
 }
-

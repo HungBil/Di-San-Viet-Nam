@@ -1,4 +1,16 @@
-import type { AgeGroup, Artifact, ArtifactDetail, ChatMessage, Landmark, LandmarkDetail, Story, StoryTargetType } from "./types";
+import type {
+  AgeGroup,
+  Artifact,
+  ArtifactDetail,
+  ChatMessage,
+  Landmark,
+  LandmarkDetail,
+  Story,
+  StoryTargetType,
+  SttResponse,
+  TtsResponse,
+  VoiceProvider
+} from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
@@ -38,6 +50,28 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
+  tts: (payload: { text: string; voice?: string; provider?: VoiceProvider }) =>
+    request<TtsResponse>("/api/voice/tts", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  stt: async (file: File, provider?: VoiceProvider) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (provider) formData.append("provider", provider);
+
+    const response = await fetch(`${API_BASE_URL}/api/voice/stt`, {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error ?? `Request failed with ${response.status}`);
+    }
+
+    return response.json() as Promise<SttResponse>;
+  },
   share: (storyId: string) =>
     request<{ shareId: string; url: string }>("/api/share", {
       method: "POST",
@@ -45,4 +79,3 @@ export const api = {
     }),
   shareStory: (shareId: string) => request<Story & { shareId: string }>(`/api/share/${shareId}`)
 };
-
