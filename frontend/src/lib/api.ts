@@ -51,7 +51,7 @@ export const api = {
       body: JSON.stringify(payload)
     }),
   story: (id: string) => request<Story>(`/api/stories/${id}`),
-  chat: (payload: { artifactId: string; message: string; history?: ChatMessage[] }) =>
+  chat: (payload: { artifactId?: string; targetType?: StoryTargetType; targetId?: string; message: string; history?: ChatMessage[] }) =>
     request<{ answer: string; suggestions: string[] }>("/api/chat", {
       method: "POST",
       body: JSON.stringify(payload)
