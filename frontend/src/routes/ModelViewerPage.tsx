@@ -253,7 +253,7 @@ export function ModelViewerPage({ autoNarrateAnnotations = false, embeddedModel 
     const renderer = new WebGLRenderer({
       alpha: true,
       antialias: true,
-      preserveDrawingBuffer: true,
+      powerPreference: "high-performance",
     });
     renderer.setPixelRatio(1);
     renderer.outputColorSpace = "srgb";
